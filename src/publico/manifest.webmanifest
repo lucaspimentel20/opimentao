@@ -1,0 +1,16 @@
+{
+  "name": "O Pimentão — Gestão",
+  "short_name": "O Pimentão",
+  "description": "Vendas, caixa, estoque e relatórios do O Pimentão",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFF8EE",
+  "theme_color": "#1F4D24",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

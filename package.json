@@ -1,0 +1,10 @@
+{
+  "name": "opimentao",
+  "private": true,
+  "type": "module",
+  "description": "O Pimentão — vendas, caixa, estoque e relatórios",
+  "scripts": {
+    "montar": "node scripts/montar.mjs",
+    "testar": "node --test tests/*.test.mjs"
+  }
+}
