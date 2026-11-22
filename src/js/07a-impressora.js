@@ -111,7 +111,7 @@ function imprimirDespacho(v, c) {
   render(html`<div class="despacho">
     <div class="topo"><${Pimentao} t=${64}/><b>O PIMENTÃO</b><span>HORTIFRUTI</span></div>
     <div class="tit">DESPACHO DE MERCADORIA</div>
-    <div class="cli">Cliente<b>${c.clientes.get(v.clienteId)?.nome || "Consumidor"}</b></div>
+    <div class="cli">Cliente<b>${(v.clienteId && (S.clientes.find((x) => x.id === v.clienteId)?.nome || c.clientes.get(v.clienteId)?.nome)) || "Consumidor"}</b></div>
     <div class="dh"><span>${d.toLocaleDateString("pt-BR")}</span><span>${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span></div>
     <hr/>
     ${v.itens.map((i) => { const q = qtdDespacho(i); return html`<div class="it"><div class="q">${q.q}<small>${q.u}</small></div><div class="m">${c.prod.get(i.produtoId)?.nome || "Produto"}${cxDe(i).length ? html`<em>+ ${cxDe(i).map((x) => x.q + " cx " + (c.tipos.get(x.tipoId)?.nome || "")).join(" + ")} vazia(s)</em>` : null}</div></div>`; })}
