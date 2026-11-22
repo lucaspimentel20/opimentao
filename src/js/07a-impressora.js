@@ -2,7 +2,7 @@
 // A configuração é de cada aparelho (fica guardada no navegador), porque cada
 // computador ou celular tem a sua impressora.
 const IMP_CHAVE = "pimentao.impressora";
-const IMP_PADRAO = { largura: 80, margem: 3, fonte: 12, vias: 1, auto: true, negrito: true, v: 2 };
+const IMP_PADRAO = { largura: 80, margem: 3, fonte: 12, vias: 1, auto: true, negrito: true, despacho: true, v: 2 };
 function impConfig() {
   try {
     const salvo = JSON.parse(localStorage.getItem(IMP_CHAVE) || "{}");
@@ -15,10 +15,17 @@ function impSalvar(cfg) {
 }
 // Imprime só o cupom, no tamanho da bobina. Funciona com qualquer impressora
 // instalada no aparelho (USB, rede, Bluetooth pareado ou app de impressão no Android).
+let FILA_IMP = Promise.resolve();
 function imprimirCupom(alvo, cfgTeste) {
+  const el0 = typeof alvo === "string" || !alvo ? document.querySelector(alvo || ".cupom") : alvo;
+  const copia = el0 ? el0.cloneNode(true) : null; // copia já, a tela pode mudar até chegar a vez
+  FILA_IMP = FILA_IMP.then(() => new Promise((fim) => imprimirAgora(copia, cfgTeste, fim)));
+  return FILA_IMP;
+}
+function imprimirAgora(alvo, cfgTeste, fim) {
   const cfg = cfgTeste || impConfig();
-  const el = typeof alvo === "string" || !alvo ? document.querySelector(alvo || ".cupom") : alvo;
-  if (!el) { toast("Não achei o comprovante para imprimir", true); return; }
+  const el = alvo;
+  if (!el) { toast("Não achei o comprovante para imprimir", true); fim(); return; }
   document.getElementById("area-impressao")?.remove(); document.getElementById("pagina-impressao")?.remove();
   const area = document.createElement("div"); area.id = "area-impressao";
   const vias = Math.min(Math.max(+cfg.vias || 1, 1), 3);
@@ -46,9 +53,11 @@ function imprimirCupom(alvo, cfgTeste) {
 }`;
   st.textContent = regras();
   document.head.appendChild(st); document.body.appendChild(area);
-  const limpar = () => { area.remove(); st.remove(); removeEventListener("afterprint", limpar); };
+  let feito = false;
+  const limpar = () => { if (feito) return; feito = true; area.remove(); st.remove(); removeEventListener("afterprint", limpar); setTimeout(fim, 300); };
   addEventListener("afterprint", limpar);
-  setTimeout(() => window.print(), 50);
+  setTimeout(() => { window.print(); setTimeout(limpar, 1500); }, 50); // na janela do caixa o print() volta na hora; o afterprint também limpa
+
 }
 
 function ImpressoraConfig() {
@@ -64,6 +73,7 @@ function ImpressoraConfig() {
       <${Campo} r="Vias por venda" d="2 = uma para o cliente e uma para a loja"><${Sel} valor=${String(cfg.vias)} set=${(v) => mudar("vias", +v)} opcoes=${[["1", "1 via"], ["2", "2 vias"], ["3", "3 vias"]]}/></${Campo}>
     </div>
     <label class="chk"><input type="checkbox" checked=${cfg.auto} onChange=${(e) => mudar("auto", e.target.checked)}/> Imprimir sozinho ao concluir a venda</label>
+    <label class="chk"><input type="checkbox" checked=${cfg.despacho} onChange=${(e) => mudar("despacho", e.target.checked)}/> Imprimir também a nota de despacho (sem preços) ao concluir a venda</label>
     <label class="chk"><input type="checkbox" checked=${cfg.negrito} onChange=${(e) => mudar("negrito", e.target.checked)}/> Letra mais escura (recomendado em impressora térmica)</label>
     <div class="acoes">
       <button class="btn" onClick=${() => { const ok = impSalvar(cfg); toast(ok ? "Impressora salva neste aparelho" : "Este navegador não deixou salvar", !ok); }}>Salvar</button>
@@ -81,4 +91,32 @@ function ImpressoraConfig() {
     </div>
     <p class="txt"><b>Para imprimir sem abrir a janela de impressão</b> (no computador): veja a seção "Imprimir direto" no LEIA-IMPRESSORA do projeto.</p>
   </div>`;
+}
+
+// ---- nota de despacho: só cliente, data/hora, quantidade e mercadoria (sem preços), letra grande ----
+function qtdDespacho(i) {
+  if (i.unidade === "kg") return { q: (i.gramas / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 3 }), u: "KG" };
+  const meias = i.unidade === "meia" ? i.meias || 1 : i.meias || 0;
+  const inteiras = (i.unidade === "meia" ? 0 : i.caixas || 0) + Math.floor(meias / 2), meia = meias % 2 === 1;
+  return { q: (inteiras ? String(inteiras) : "") + (meia ? "½" : "") || "0", u: "CX" };
+}
+function imprimirDespacho(v, c) {
+  if (!v) return;
+  const d = new Date(v.criadoEm || Date.now());
+  let cx = 0, kgT = 0;
+  for (const i of v.itens) { if (i.unidade === "kg") kgT += i.gramas; else cx += (i.unidade === "meia" ? 0 : i.caixas || 0) + ((i.unidade === "meia" ? i.meias || 1 : i.meias || 0) * 0.5); }
+  const cxTxt = cx ? (Math.floor(cx) || "") + (cx % 1 ? "½" : "") + " cx" : "";
+  const kgTxt = kgT ? (kgT / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 3 }) + " kg" : "";
+  const el = document.createElement("div");
+  render(html`<div class="despacho">
+    <div class="topo"><${Pimentao} t=${64}/><b>O PIMENTÃO</b><span>HORTIFRUTI</span></div>
+    <div class="tit">DESPACHO DE MERCADORIA</div>
+    <div class="cli">Cliente<b>${c.clientes.get(v.clienteId)?.nome || "Consumidor"}</b></div>
+    <div class="dh"><span>${d.toLocaleDateString("pt-BR")}</span><span>${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span></div>
+    <hr/>
+    ${v.itens.map((i) => { const q = qtdDespacho(i); return html`<div class="it"><div class="q">${q.q}<small>${q.u}</small></div><div class="m">${c.prod.get(i.produtoId)?.nome || "Produto"}${cxDe(i).length ? html`<em>+ ${cxDe(i).map((x) => x.q + " cx " + (c.tipos.get(x.tipoId)?.nome || "")).join(" + ")} vazia(s)</em>` : null}</div></div>`; })}
+    <div class="tot">Total: ${[cxTxt, kgTxt].filter(Boolean).join(" + ")}</div>
+    <div class="conf"><div></div>Conferido por</div>
+  </div>`, el);
+  return imprimirCupom(el.firstElementChild);
 }

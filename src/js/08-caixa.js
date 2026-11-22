@@ -365,7 +365,7 @@ function Comprovante({ s, c, id }) {
     S.abrirPedido = pid; location.hash = "caixa";
   }, "Nota reaberta no caixa");
   // impressão automática logo depois de concluir a venda (se ligada neste aparelho)
-  useEffect(() => { if (v && S.imprimirVenda === v.id) { S.imprimirVenda = null; if (impConfig().auto) setTimeout(() => imprimirCupom(".cupom"), 400); } }, [v?.id]);
+  useEffect(() => { if (v && S.imprimirVenda === v.id) { S.imprimirVenda = null; const cfg = impConfig(); if (cfg.auto) setTimeout(() => { imprimirCupom(".cupom"); if (cfg.despacho) imprimirDespacho(v, c); }, 400); } }, [v?.id]);
   if (!v) return html`<div class="pag"><${Vazio}>Venda não encontrada.</${Vazio}></div>`;
   const se = v.entrega ? situacaoEntrega(s, v) : null;
   const cli = s.clientes.find((x) => x.id === v.clienteId);
@@ -383,6 +383,7 @@ function Comprovante({ s, c, id }) {
   return html`<div class="pag">
     <div class="cab"><h1>Venda ${numVenda(v.id)}</h1><div class="acoes">
       <button class="btn" onClick=${() => imprimirCupom(".cupom")}>🖨️ Imprimir</button>
+      <button class="btn out" onClick=${() => imprimirDespacho(v, c)}>📦 Nota de despacho</button>
       <a class="btn out" href=${wa} target="_blank" rel="noreferrer">WhatsApp</a>
       <button class="btn out" onClick=${() => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Comprovante copiado"), () => toast("Não deu para copiar", true))}>Copiar texto</button>
       <a class="btn out" href="#caixa">Nova venda</a>
