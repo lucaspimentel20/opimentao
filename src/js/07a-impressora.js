@@ -61,8 +61,8 @@ function ImpressoraConfig() {
       <${Campo} r="Tamanho da letra" d="Aumente se sair pequeno; diminua se cortar"><input type="number" min="9" max="16" value=${cfg.fonte} onInput=${(e) => mudar("fonte", +e.target.value)}/></${Campo}>
       <${Campo} r="Vias por venda" d="2 = uma para o cliente e uma para a loja"><${Sel} valor=${String(cfg.vias)} set=${(v) => mudar("vias", +v)} opcoes=${[["1", "1 via"], ["2", "2 vias"], ["3", "3 vias"]]}/></${Campo}>
     </div>
-    <label class="txt" style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked=${cfg.auto} onChange=${(e) => mudar("auto", e.target.checked)}/> Imprimir sozinho ao concluir a venda</label>
-    <label class="txt" style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked=${cfg.negrito} onChange=${(e) => mudar("negrito", e.target.checked)}/> Letra mais escura (recomendado em impressora térmica)</label>
+    <label class="chk"><input type="checkbox" checked=${cfg.auto} onChange=${(e) => mudar("auto", e.target.checked)}/> Imprimir sozinho ao concluir a venda</label>
+    <label class="chk"><input type="checkbox" checked=${cfg.negrito} onChange=${(e) => mudar("negrito", e.target.checked)}/> Letra mais escura (recomendado em impressora térmica)</label>
     <div class="acoes">
       <button class="btn" onClick=${() => { const ok = impSalvar(cfg); toast(ok ? "Impressora salva neste aparelho" : "Este navegador não deixou salvar", !ok); }}>Salvar</button>
       <button class="btn out" onClick=${() => imprimirCupom("#cupom-teste", cfg)}>Imprimir teste</button>
