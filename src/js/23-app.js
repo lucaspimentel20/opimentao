@@ -35,9 +35,9 @@ function App() {
   return html`<div class="shell">
     <aside class="side"><div class="logo"><${Pimentao}/><span><span class="o">O</span> Pimentão</span></div>
       <nav class="nav">${menu.map(([k, r]) => html`<a href=${"#" + k} class=${ativo === k ? "on" : ""}>${r}</a>`)}</nav>
-      <div class="quem"><b>${nome}</b><span>${gestor ? "Gestor" : "Operador"}</span>${s.offline ? html`<small style="display:block;color:#FFB4A9">Sem conexão em tempo real…</small>` : null}<div style="display:flex;gap:6px;margin-top:8px"><button class="btn ghost sm" style="color:#FFF8EE" onClick=${() => setMinhaSenha(true)}>Minha senha</button><button class="btn ghost sm" style="color:#FFF8EE" onClick=${sair}>Sair</button></div></div></aside>
+      <div class="quem"><b>${nome}</b><span>${gestor ? "Gestor" : "Operador"}</span>${s.offline || s.pendentes ? html`<small style="display:block;color:#FFB4A9">${s.offline ? "Sem internet" : "Enviando…"}${s.pendentes ? ` · ${s.pendentes} para enviar` : ""}</small>` : null}<div style="display:flex;gap:6px;margin-top:8px"><button class="btn ghost sm" style="color:#FFF8EE" onClick=${() => setMinhaSenha(true)}>Minha senha</button><button class="btn ghost sm" style="color:#FFF8EE" onClick=${sair}>Sair</button></div></div></aside>
     <header class="top"><div class="logo"><${Pimentao} t=${24}/><span><span class="o">O</span> Pimentão</span></div><small>${nome} · ${gestor ? "Gestor" : "Operador"} · <a href="#" style="color:inherit" onClick=${(e) => { e.preventDefault(); sair(); }}>Sair</a></small></header>
-    <main class="main">${s.erro ? html`<p class="erro">${s.erro}</p>` : null}${tela}</main>
+    <main class="main">${s.offline || s.pendentes ? html`<div class="aviso-offline">📴 ${s.offline ? "Sem internet — pode continuar vendendo." : "Internet voltou — enviando…"}${s.pendentes ? ` ${s.pendentes} operação(ões) guardada(s) neste aparelho, serão enviadas sozinhas.` : ""}</div>` : null}${s.erro ? html`<p class="erro">${s.erro}</p>` : null}${tela}</main>
     <nav class="bottom">${menu.map(([k, r]) => html`<a href=${"#" + k} class=${ativo === k ? "on" : ""}>${r.split(" ")[0]}</a>`)}</nav>
     ${minhaSenha ? html`<${SenhaForm} u=${{ id: s.eu, nome }} onFechar=${() => setMinhaSenha(false)}/>` : null}
     <${Toast}/>
@@ -45,3 +45,12 @@ function App() {
 }
 render(html`<${App}/>`, document.getElementById("app"));
 iniciar();
+// guarda o sistema no aparelho (abre e vende sem internet)
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).then((reg) => {
+    setTimeout(() => {
+      const urls = performance.getEntriesByType("resource").map((r) => r.name).filter((u) => /^https:\/\/(cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)\//.test(u) || u.startsWith(location.origin));
+      reg.active?.postMessage({ tipo: "guardar", urls: [...new Set([location.href.split("#")[0], ...urls])] });
+    }, 4000);
+  }).catch((e) => console.warn("modo sem internet indisponível:", e));
+}

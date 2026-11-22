@@ -2,9 +2,13 @@
 // A configuração é de cada aparelho (fica guardada no navegador), porque cada
 // computador ou celular tem a sua impressora.
 const IMP_CHAVE = "pimentao.impressora";
-const IMP_PADRAO = { largura: 80, margem: 3, fonte: 12, vias: 1, auto: false, negrito: true };
+const IMP_PADRAO = { largura: 80, margem: 3, fonte: 12, vias: 1, auto: true, negrito: true, v: 2 };
 function impConfig() {
-  try { return { ...IMP_PADRAO, ...JSON.parse(localStorage.getItem(IMP_CHAVE) || "{}") }; } catch { return { ...IMP_PADRAO }; }
+  try {
+    const salvo = JSON.parse(localStorage.getItem(IMP_CHAVE) || "{}");
+    if (salvo.v !== 2) { salvo.auto = true; salvo.v = 2; localStorage.setItem(IMP_CHAVE, JSON.stringify({ ...IMP_PADRAO, ...salvo })); } // nova versão: imprime sozinho ao concluir a venda
+    return { ...IMP_PADRAO, ...salvo };
+  } catch { return { ...IMP_PADRAO }; }
 }
 function impSalvar(cfg) {
   try { localStorage.setItem(IMP_CHAVE, JSON.stringify(cfg)); return true; } catch { return false; }

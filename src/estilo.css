@@ -119,3 +119,5 @@ tr:last-child td{border-bottom:none}
 @media (max-width:1100px){.pdv{grid-template-columns:1fr}.carr{position:static}}
 @media (max-width:900px){.linhaitem{grid-template-columns:1fr 1fr}.linhaitem .full{grid-column:1/-1}.clilay{grid-template-columns:1fr}}
 @media (max-width:420px){.prods{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.aviso-offline{background:#FFF1D6;border:1px solid #E8B44A;color:#6B4A00;border-radius:10px;padding:8px 12px;margin:0 0 12px;font-weight:700;font-size:14px}
+@media print{.aviso-offline{display:none}}
