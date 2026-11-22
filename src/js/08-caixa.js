@@ -89,6 +89,7 @@ function Pdv({ s, c, sessao }) {
     }
     if (negativos.length) setTimeout(() => toast("Atenção: estoque ficou NEGATIVO em " + negativos.join(", ") + ".", true), 400);
     await gravar("pedidos", id, { clienteId: cliente.id, itens: itens.map((i) => ({ ...i })), consumo, desconto: dc, status: "aberto", criadoPor: antes?.criadoPor || S.eu, criadoEm: antes?.criadoEm || agora(), atualizadoEm: agora(), atualizadoPor: S.eu });
+    { const cfg = impConfig(); if (cfg.auto && cfg.despacho) imprimirDespacho(despachoDe(itens, cliente.id), c); }
     limpar();
   }, "Nota em aberto salva");
   const abrirPedido = (x) => {
@@ -144,18 +145,15 @@ function Pdv({ s, c, sessao }) {
   const podeReceber = itens.length && total > 0 && !semPreco;
   useEffect(() => { S.vendendo = itens.length > 0; if (!itens.length && S.novaVersao) verificarVersao(); return () => { S.vendendo = false; }; }, [itens.length]);
   // nota de despacho do jeito que está, SEM fechar a venda (pode ter item sem preço; não mexe em estoque, caixa nem fiado)
-  const imprimirConta = () => {
-    if (!itens.length) return;
-    const v = { clienteId: cliente ? cliente.id : "", criadoEm: new Date().toISOString(), itens: itens.map((i) => {
+  const despachoDe = (lista, clienteId) => ({ clienteId: clienteId || "", criadoEm: new Date().toISOString(), itens: lista.map((i) => {
       const q = qtds(i);
       const caixaria = i.vai ? listaCx(i) : [];
       const base = { produtoId: i.produtoId, ...(caixaria.length ? { caixaria } : {}) };
       if (i.unidade === "cx" && i.meia) return { ...base, unidade: "meia", meias: Number(String(i.qtd).replace(",", ".")) || 1 };
       if (i.unidade === "cx") return { ...base, unidade: "cx", caixas: Number.isFinite(q.caixas) ? q.caixas : 0, meias: q.meias || 0 };
       return { ...base, unidade: "kg", gramas: q.gramas || 0 };
-    }) };
-    imprimirDespacho(v, c);
-  };
+    }) });
+  const imprimirConta = () => { if (itens.length) imprimirDespacho(despachoDe(itens, cliente?.id), c); };
   const at = useMemo(() => ({}), []);
   at.f = (e) => {
     if (e.key === "F2") { e.preventDefault(); if (!ed && !pagando && podeReceber) { setPagando(true); if (!f.dinheiro && !f.pix && !f.credito && !f.debito && !f.prazo) tudo("dinheiro"); } }
@@ -173,7 +171,7 @@ function Pdv({ s, c, sessao }) {
   return html`<div class="pdv">
     <section style="display:flex;flex-direction:column;gap:10px;min-width:0">
       <button class=${"btn " + (abertas.length ? "" : "out")} style="justify-content:space-between" onClick=${() => setVerAbertas(!verAbertas)}><span>📝 Notas em aberto (${abertas.length})</span><span>${verAbertas ? "▲" : "▼"}</span></button>
-      ${verAbertas ? html`<div class="card" style="gap:6px">${abertas.length ? html`<div class="tab"><table><thead><tr><th>Cliente</th><th>Itens</th><th class="r">Total</th><th>Última mudança</th><th></th></tr></thead><tbody>${abertas.map((x) => html`<tr style=${pedidoId === x.id ? "background:var(--sec)" : ""}><td><b>${s.clientes.find((k) => k.id === x.clienteId)?.nome || "—"}</b></td><td><small>${(x.itens || []).map((i) => i.nome + " " + (i.unidade === "cx" ? i.qtd + (i.meia ? "×½" : "") + " cx" : i.qtd + " kg")).join(", ")}</small></td><td class="r">${totPedido(x) ? reais(totPedido(x)) : "Sem preço"}</td><td><small>${dataHora(x.atualizadoEm)} · ${nomePessoa(s, x.atualizadoPor)}</small></td><td style="white-space:nowrap"><button class="btn sm" onClick=${() => abrirPedido(x)}>Abrir</button> <button class="btn ghost sm" onClick=${() => excluirPedido(x)}>Excluir</button></td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Nenhuma nota em aberto.</${Vazio}>`}</div>` : null}
+      ${verAbertas ? html`<div class="card" style="gap:6px">${abertas.length ? html`<div class="tab"><table><thead><tr><th>Cliente</th><th>Itens</th><th class="r">Total</th><th>Última mudança</th><th></th></tr></thead><tbody>${abertas.map((x) => html`<tr style=${pedidoId === x.id ? "background:var(--sec)" : ""}><td><b>${s.clientes.find((k) => k.id === x.clienteId)?.nome || "—"}</b></td><td><small>${(x.itens || []).map((i) => i.nome + " " + (i.unidade === "cx" ? i.qtd + (i.meia ? "×½" : "") + " cx" : i.qtd + " kg")).join(", ")}</small></td><td class="r">${totPedido(x) ? reais(totPedido(x)) : "Sem preço"}</td><td><small>${dataHora(x.atualizadoEm)} · ${nomePessoa(s, x.atualizadoPor)}</small></td><td style="white-space:nowrap"><button class="btn sm" onClick=${() => abrirPedido(x)}>Abrir</button> <button class="btn out sm" title="Nota de despacho" onClick=${() => imprimirDespacho(despachoDe(x.itens || [], x.clienteId), c)}>📦 Despacho</button> <button class="btn ghost sm" onClick=${() => excluirPedido(x)}>Excluir</button></td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Nenhuma nota em aberto.</${Vazio}>`}</div>` : null}
       <input id="busca-prod" placeholder="🔎 Buscar produto   (F3 · Enter abre o primeiro)" value=${busca} onInput=${(e) => setBusca(e.target.value)} onKeyDown=${(e) => { if (e.key === "Enter" && prods.length) { e.preventDefault(); const t = busca.trim().toLowerCase(); abrir(prods.find((p) => p.nome.toLowerCase().startsWith(t)) || prods[0]); } }} style="min-height:48px"/>
       ${prods.length ? html`<div class="prods">${prods.map((p) => { const e = c.estoque.get(p.id); return html`<div style="position:relative"><button style="width:100%;height:100%" class=${"prod " + (e && e.totalG > 0 ? "" : "sem")} onClick=${() => abrir(p)}><b>${p.nome}</b><span class="p">${p.precoCx ? reais(p.precoCx) + "/cx " : ""}${p.precoKg ? reais(p.precoKg) + "/kg" : ""}${!p.precoCx && !p.precoKg ? "Sem preço" : ""}</span><small>${e && e.totalG > 0 ? saldoTxt(e.cx, e.g) : "Sem estoque"}</small></button></div>`; })}</div>` : html`<${Vazio}>Nenhum produto. O gestor cadastra em Configurações.</${Vazio}>`}
     </section>
@@ -325,7 +323,7 @@ function Caixa({ s, c }) {
         <${Num} r="Pix" v=${reais(e.pix)}/><${Num} r="Cartão" v=${reais(e.cartao)} d=${"crédito " + reais(e.credito || 0) + " · débito " + reais(e.debito || 0)}/>
         <${Num} r="Desperdício do turno" v=${reais(Math.round(e.perda * 100))} tom=${e.perda ? "ruim" : ""}/>
       </div>
-      <div class="card"><h2>Vendas do turno</h2>${vendas.length ? html`<div class="tab"><table><thead><tr><th>Nº</th><th>Hora</th><th>Cliente</th><th class="r">Total</th><th class="r">Fiado</th></tr></thead><tbody>${vendas.map((v) => html`<tr class=${v.status === "cancelada" ? "risc" : ""}><td><a class="link" href=${"#venda-" + v.id}>${numVenda(v.id)}</a></td><td>${hora(v.criadoEm)}</td><td>${s.clientes.find((x) => x.id === v.clienteId)?.nome || "Consumidor"}</td><td class="r">${reais(v.total)}</td><td class="r">${v.prazo ? reais(v.prazo) : "—"}</td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Nenhuma venda ainda.</${Vazio}>`}</div>
+      <div class="card"><h2>Vendas do turno</h2>${vendas.length ? html`<div class="tab"><table><thead><tr><th>Nº</th><th>Hora</th><th>Cliente</th><th class="r">Total</th><th class="r">Fiado</th><th></th></tr></thead><tbody>${vendas.map((v) => html`<tr class=${v.status === "cancelada" ? "risc" : ""}><td><a class="link" href=${"#venda-" + v.id}>${numVenda(v.id)}</a></td><td>${hora(v.criadoEm)}</td><td>${s.clientes.find((x) => x.id === v.clienteId)?.nome || "Consumidor"}</td><td class="r">${reais(v.total)}</td><td class="r">${v.prazo ? reais(v.prazo) : "—"}</td><td style="white-space:nowrap"><button class="btn ghost sm" title="Imprimir cupom" onClick=${() => { location.hash = "venda-" + v.id; setTimeout(() => imprimirCupom(".cupom"), 600); }}>🖨️</button> ${v.status !== "cancelada" ? html`<button class="btn ghost sm" title="Nota de despacho" onClick=${() => imprimirDespacho(v, c)}>📦</button>` : null}</td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Nenhuma venda ainda.</${Vazio}>`}</div>
       <div class="duas"><div class="card"><h2>Desperdício do turno</h2>${desp.length ? html`<div class="tab"><table><thead><tr><th>Hora</th><th>Produto</th><th>Motivo</th><th class="r">Custo</th></tr></thead><tbody>${desp.map((m) => html`<tr><td>${hora(m.criadoEm)}</td><td>${c.prod.get(m.produtoId)?.nome}</td><td>${m.motivo}</td><td class="r">${reais(Math.round(m.custo * 100))}</td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Nada lançado.</${Vazio}>`}</div>
       <div class="card"><h2>Movimentos de dinheiro</h2>${movs.length ? html`<div class="tab"><table><thead><tr><th>Hora</th><th>Tipo</th><th>Descrição</th><th class="r">Valor</th></tr></thead><tbody>${movs.map((m) => html`<tr><td>${hora(m.criadoEm)}</td><td>${m.tipo}</td><td>${m.descricao}</td><td class="r">${reais(m.valor)}</td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Nenhum movimento.</${Vazio}>`}</div></div>
     </div>`}
