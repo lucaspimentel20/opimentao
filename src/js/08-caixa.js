@@ -136,10 +136,31 @@ function Pdv({ s, c, sessao }) {
   const addItem = () => { if (!edOk) return; setItens(itens.some((x) => x.k === ed.k) ? itens.map((x) => (x.k === ed.k ? ed : x)) : [...itens, ed]); setEd(null); setBusca(""); focoBusca(); };
   const enterAdd = (e) => { if (e.key === "Enter") { e.preventDefault(); addItem(); } };
   const podeReceber = itens.length && total > 0 && !semPreco;
+  // imprime a conta do jeito que está, SEM fechar a venda (não mexe em estoque, caixa nem fiado)
+  const imprimirConta = () => {
+    if (!itens.length) return;
+    const n2 = (v) => (v / 100).toFixed(2).replace(".", ",");
+    const qTxt = (i) => i.unidade === "cx" ? (i.meia ? i.qtd + " × ½ cx" : qtds(i).meias ? qtds(i).caixas + " cx + ½ cx" : i.qtd + " cx") : kg(paraGramas(i.qtd));
+    const el = document.createElement("div");
+    render(html`<div class="cupom">
+      <div class="c"><${Pimentao} t=${36}/><br/><b style="font-family:Fredoka;font-size:20px">O Pimentão</b><br/>HORTIFRUTI</div><hr/>
+      <div class="c"><b>CONFERÊNCIA DE CONTA</b><br/>NÃO É COMPROVANTE DE PAGAMENTO</div><hr/>
+      <div class="par"><span>${new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}, ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span><span>${pedidoId ? "Nota em aberto" : ""}</span></div>
+      <div>${S.euNome ? "Atendente: " + S.euNome : ""}</div>${cliente ? html`<div>Cliente: ${cliente.nome}</div>` : null}<hr/>
+      ${itens.map((i) => { const t = totI(i); return html`<div>${i.nome}</div><div class="par"><span>${qTxt(i)} x ${paraCentavos(i.preco) > 0 ? n2(precoUn(i)) : "—"}</span><span>${Number.isFinite(t) && t > 0 ? n2(t) : "sem preço"}</span></div>`; })}<hr/>
+      <div class="par"><span>Subtotal</span><span>${reais(subtotal)}</span></div>
+      ${dc > 0 ? html`<div class="par"><span>Desconto</span><span>- ${reais(dc)}</span></div>` : null}
+      <div class="par"><b>TOTAL A PAGAR</b><b>${reais(total)}</b></div>
+      ${semPreco ? html`<div class="c">(${semPreco} item(ns) ainda sem preço)</div>` : null}<hr/>
+      <div class="c"><b>Obrigado pela preferência!</b></div>
+    </div>`, el);
+    imprimirCupom(el.firstElementChild);
+  };
   const at = useMemo(() => ({}), []);
   at.f = (e) => {
     if (e.key === "F2") { e.preventDefault(); if (!ed && !pagando && podeReceber) { setPagando(true); if (!f.dinheiro && !f.pix && !f.credito && !f.debito && !f.prazo) tudo("dinheiro"); } }
     else if (e.key === "F3") { e.preventDefault(); if (!ed && !pagando) focoBusca(); }
+    else if (e.key === "F8") { e.preventDefault(); if (!ed && itens.length) imprimirConta(); }
     else if (e.key === "F4") { e.preventDefault(); if (!ed && !pagando && itens.length) (cliente ? salvarAberto() : (toast("Escolha o cliente para salvar a nota em aberto.", true), setEscCli(true))); }
     else if (e.key === "Enter" && pagando && !escCli && e.target?.tagName !== "BUTTON" && falta === 0 && !oc && !semPreco) { e.preventDefault(); concluir(); }
   };
@@ -164,6 +185,7 @@ function Pdv({ s, c, sessao }) {
       <div class="tot"><span>Total</span><span>${reais(total)}</span></div>
       ${semPreco ? html`<p class="av" style="margin:0">${semPreco} item(ns) sem preço: coloque o preço para receber, ou salve como nota em aberto.</p>` : null}
       <button class="btn lg" disabled=${!itens.length || total <= 0 || semPreco > 0} onClick=${() => { setPagando(true); if (!f.dinheiro && !f.pix && !f.credito && !f.debito && !f.prazo) tudo("dinheiro"); }}>Receber ${reais(total)}<span class="tecla">F2</span></button>
+      ${itens.length ? html`<button class="btn out" onClick=${imprimirConta}>🖨️ Imprimir conta (sem fechar)<span class="tecla">F8</span></button>` : null}
       ${itens.length ? html`<button class="btn out" disabled=${oc} onClick=${() => (cliente ? salvarAberto() : (toast("Escolha o cliente para salvar a nota em aberto.", true), setEscCli(true)))}>📝 ${pedidoId ? "Salvar alterações da nota em aberto" : "Salvar como nota em aberto"}<span class="tecla">F4</span></button>` : null}
       ${itens.length ? html`<button class="btn ghost" onClick=${limpar}>${pedidoId ? "Fechar sem salvar" : "Limpar venda"}</button>` : null}
     </section>
