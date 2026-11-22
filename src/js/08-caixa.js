@@ -128,7 +128,7 @@ function Pdv({ s, c, sessao }) {
       const ped = S.pedidos.find((x) => x.id === pedidoId);
       if (ped?.vendaOrigem) for (const e of S.entregas.filter((x) => x.vendaId === ped.vendaOrigem && x.status !== "cancelada")) await alterar("entregas", e.id, { vendaId: chave, vendaAnterior: ped.vendaOrigem });
     }
-    const id = chave; limpar(); location.hash = "venda-" + id;
+    const id = chave; limpar(); S.imprimirVenda = id; location.hash = "venda-" + id;
     if (negativos.length) setTimeout(() => toast("Atenção: estoque ficou NEGATIVO em " + negativos.join(", ") + ". Confira a entrada desses produtos.", true), 400);
   }, troco > 0 ? `Venda concluída. Troco ${reais(troco)}` : "Venda concluída");
   // ===== atalhos de teclado =====
@@ -335,6 +335,8 @@ function Comprovante({ s, c, id }) {
     await alterar("vendas", v.id, { status: "cancelada", reaberta: true, pedidoReaberto: pid, cancelamento: { motivo: "Reaberta para alteração", por: S.eu, em: agora(), sessaoId: v.sessaoId } });
     S.abrirPedido = pid; location.hash = "caixa";
   }, "Nota reaberta no caixa");
+  // impressão automática logo depois de concluir a venda (se ligada neste aparelho)
+  useEffect(() => { if (v && S.imprimirVenda === v.id) { S.imprimirVenda = null; if (impConfig().auto) setTimeout(() => imprimirCupom(".cupom"), 400); } }, [v?.id]);
   if (!v) return html`<div class="pag"><${Vazio}>Venda não encontrada.</${Vazio}></div>`;
   const se = v.entrega ? situacaoEntrega(s, v) : null;
   const cli = s.clientes.find((x) => x.id === v.clienteId);
@@ -351,7 +353,8 @@ function Comprovante({ s, c, id }) {
   const wa = `https://wa.me/${fone ? (fone.length <= 11 ? "55" + fone : fone) : ""}?text=${encodeURIComponent(txt)}`;
   return html`<div class="pag">
     <div class="cab"><h1>Venda ${numVenda(v.id)}</h1><div class="acoes">
-      <a class="btn" href=${wa} target="_blank" rel="noreferrer">WhatsApp</a>
+      <button class="btn" onClick=${() => imprimirCupom(".cupom")}>🖨️ Imprimir</button>
+      <a class="btn out" href=${wa} target="_blank" rel="noreferrer">WhatsApp</a>
       <button class="btn out" onClick=${() => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Comprovante copiado"), () => toast("Não deu para copiar", true))}>Copiar texto</button>
       <a class="btn out" href="#caixa">Nova venda</a>
       ${v.status !== "cancelada" && !v.entrega ? html`<button class="btn out" onClick=${() => setMarcEnt(true)}>Marcar para entregar</button>` : null}

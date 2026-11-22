@@ -32,7 +32,7 @@ function Config({ s }) {
   const gestor = papelDe(s) === "gestor";
   const [aba, setAba] = useState(gestor ? "produtos" : "fornecedores"); const [pf, setPf] = useState(undefined); const [ff, setFf] = useState(undefined); const [lf, setLf] = useState(undefined); const [oc, rodar] = useAcao();
   return html`<div class="pag"><h1>Configurações</h1>
-    <${Tabs} abas=${[...(gestor ? [["produtos", "Produtos"]] : []), ["fornecedores", "Fornecedores"], ["locais", "Locais de origem"], ...(gestor ? [["equipe", "Equipe"], ["pix", "Pix"], ["backup", "Backup"]] : [])]} atual=${aba} set=${setAba}/>
+    <${Tabs} abas=${[...(gestor ? [["produtos", "Produtos"]] : []), ["fornecedores", "Fornecedores"], ["locais", "Locais de origem"], ["impressora", "Impressora"], ...(gestor ? [["equipe", "Equipe"], ["pix", "Pix"], ["backup", "Backup"]] : [])]} atual=${aba} set=${setAba}/>
     ${aba === "produtos" ? html`<div class="card"><div class="cab"><h2>Produtos</h2><button class="btn" onClick=${() => setPf(null)}>+ Novo produto</button></div><p class="txt">Os preços de venda ficam em Estoque › Preço.</p>
       ${s.produtos.length ? html`<div class="tab"><table><thead><tr><th>Produto</th><th class="r">Peso da caixa</th><th class="r">Venda cx / kg</th><th></th></tr></thead><tbody>${[...s.produtos].sort((a, b) => a.nome.localeCompare(b.nome)).map((p) => html`<tr class=${p.ativo === false ? "risc" : ""}><td><b>${p.nome}</b></td><td class="r">${p.pesoCaixaG ? kg(p.pesoCaixaG) : html`<span class="tag warn">definir</span>`}</td><td class="r">${reais(p.precoCx || 0)} / ${reais(p.precoKg || 0)}</td><td><button class="btn ghost" onClick=${() => setPf(p)}>Editar</button></td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Cadastre os produtos.</${Vazio}>`}</div>` : null}
     ${aba === "fornecedores" ? html`<div class="card"><div class="cab"><h2>Fornecedores</h2><button class="btn" onClick=${() => setFf(null)}>+ Novo fornecedor</button></div>
@@ -40,6 +40,7 @@ function Config({ s }) {
     ${aba === "locais" ? html`<div class="card"><div class="cab"><h2>Locais de origem</h2><button class="btn" onClick=${() => setLf(null)}>+ Novo local</button></div><p class="txt">Cada local ativo vira uma coluna na planilha do Recebimento.</p>
       ${s.locais.length ? html`<div class="tab"><table><tbody>${[...s.locais].sort((a, b) => a.nome.localeCompare(b.nome)).map((l) => html`<tr class=${l.ativo === false ? "risc" : ""}><td><b>${l.nome}</b></td><td><button class="btn ghost" onClick=${() => setLf(l)}>Editar</button></td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Nenhum local ainda.</${Vazio}>`}</div>` : null}
     ${lf !== undefined ? html`<${LocalForm} l=${lf} onFechar=${() => setLf(undefined)}/>` : null}
+    ${aba === "impressora" ? html`<${ImpressoraConfig}/>` : null}
     ${aba === "equipe" ? html`<${Equipe} s=${s}/>` : null}
     ${aba === "pix" ? html`<${PixConfig} s=${s}/>` : null}
     ${aba === "backup" ? html`<${LinkSistema} s=${s}/><${Backup} s=${s}/>` : null}
