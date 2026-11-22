@@ -25,25 +25,22 @@ function imprimirCupom(alvo, cfgTeste) {
   }
   const larg = +cfg.largura, mg = +cfg.margem || 0, util = Math.max(larg - 2 * mg, 30);
   const st = document.createElement("style"); st.id = "pagina-impressao";
-  const regras = (alturaMm) => `#area-impressao{position:absolute;left:-10000px;top:0;background:#fff}
+  const regras = () => `#area-impressao{position:absolute;left:-10000px;top:0;background:#fff}
 #area-impressao .cupom-imp{width:${util}mm;max-width:none;margin:0 ${mg}mm;padding:0 0 2mm;border:0;box-shadow:none;
   font-size:${+cfg.fonte || 12}px;line-height:1.35;color:#000;font-weight:${cfg.negrito ? 600 : 400};-webkit-print-color-adjust:exact;print-color-adjust:exact}
 #area-impressao .cupom-imp *{color:#000!important}
 #area-impressao .cupom-imp hr{border-top:1px dashed #000}
 #area-impressao .cupom-imp b{font-weight:800}
 #area-impressao .cupom-imp a{text-decoration:none}
-@page{size:${larg}mm ${alturaMm}mm;margin:0}
+@page{margin:0}
 @media print{
   html,body{background:#fff!important;margin:0!important;padding:0!important;width:${larg}mm;min-height:0!important}
   body>*:not(#area-impressao){display:none!important}
   #area-impressao{position:static}
   #area-impressao .nova-via{break-before:page;page-break-before:always}
 }`;
-  st.textContent = regras(297);
+  st.textContent = regras();
   document.head.appendChild(st); document.body.appendChild(area);
-  // mede o cupom já na largura da bobina: a página fica do tamanho exato (sem papel em branco)
-  const alturaMm = Math.ceil(Math.max(...[...area.children].map((x) => x.getBoundingClientRect().height)) / (96 / 25.4)) + 1;
-  st.textContent = regras(Math.max(alturaMm, 20));
   const limpar = () => { area.remove(); st.remove(); removeEventListener("afterprint", limpar); };
   addEventListener("afterprint", limpar);
   setTimeout(() => window.print(), 50);
