@@ -15,6 +15,12 @@ function impSalvar(cfg) {
 }
 // Imprime só o cupom, no tamanho da bobina. Funciona com qualquer impressora
 // instalada no aparelho (USB, rede, Bluetooth pareado ou app de impressão no Android).
+// reimprimir o cupom de qualquer lista: abre a venda e imprime assim que ela aparecer na tela
+function reimprimirVenda(id) { S.reimprimir = id; if (location.hash === "#venda-" + id) avisar(); else location.hash = "venda-" + id; }
+function BotoesImpressao({ v, c }) {
+  if (!v) return null;
+  return html`<span style="white-space:nowrap"><button class="btn ghost sm" title="Reimprimir cupom" onClick=${() => reimprimirVenda(v.id)}>🖨️</button>${v.status !== "cancelada" ? html` <button class="btn ghost sm" title="Nota de despacho" onClick=${() => imprimirDespacho(v, c)}>📦</button>` : null}</span>`;
+}
 let FILA_IMP = Promise.resolve();
 function imprimirCupom(alvo, cfgTeste) {
   const el0 = typeof alvo === "string" || !alvo ? document.querySelector(alvo || ".cupom") : alvo;
@@ -54,7 +60,7 @@ function imprimirAgora(alvo, cfgTeste, fim) {
   st.textContent = regras();
   document.head.appendChild(st); document.body.appendChild(area);
   let feito = false;
-  const limpar = () => { if (feito) return; feito = true; area.remove(); st.remove(); removeEventListener("afterprint", limpar); setTimeout(fim, 2500); }; // dá tempo da impressora terminar antes da próxima
+  const limpar = () => { if (feito) return; feito = true; area.remove(); st.remove(); removeEventListener("afterprint", limpar); setTimeout(fim, 1500); }; // dá tempo da impressora terminar antes da próxima
   addEventListener("afterprint", limpar);
   setTimeout(() => { window.print(); setTimeout(limpar, 1500); }, 50); // na janela do caixa o print() volta na hora; o afterprint também limpa
 
