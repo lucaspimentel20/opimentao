@@ -32,6 +32,7 @@ function imprimirCupom(alvo, cfgTeste) {
 #area-impressao .cupom-imp hr{border-top:1px dashed #000}
 #area-impressao .cupom-imp b{font-weight:800}
 #area-impressao .cupom-imp a{text-decoration:none}
+#area-impressao .cupom-imp svg{filter:brightness(0)}
 @page{margin:0}
 @media print{
   html,body{background:#fff!important;margin:0!important;padding:0!important;width:${larg}mm;min-height:0!important}
