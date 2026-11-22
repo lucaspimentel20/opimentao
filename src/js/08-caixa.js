@@ -58,7 +58,13 @@ function Pdv({ s, c, sessao }) {
   const prods = s.produtos.filter((p) => p.ativo !== false && p.nome.toLowerCase().includes(busca.trim().toLowerCase())).sort((a, b) => a.nome.localeCompare(b.nome));
   const tiposRet = s.tiposCaixa.filter((t) => t.retornavel !== false && t.ativo !== false);
   const gestor = papelDe(s) === "gestor";
-  const abrir = (p) => { const u = p.precoCx > 0 || !p.precoKg ? "cx" : "kg"; const e = c.estoque.get(p.id); const t = e?.tiposCaixa.find((x) => tiposRet.some((y) => y.id === x)); setEd({ k: novoId("I"), produtoId: p.id, nome: p.nome, unidade: u, qtd: u === "cx" ? "1" : "", preco: txtReais(u === "cx" ? p.precoCx : p.precoKg), vai: false, tipo: t || "", cxq: "" }); };
+  const tiposDaEntrada = (pid) => {
+    const e = c.estoque.get(pid); if (!e) return [];
+    const ret = (ids) => [...new Set(ids)].map((id) => tiposRet.find((t) => t.id === id)).filter(Boolean);
+    const comEstoque = ret(e.lotes.filter((l) => l.cx > 0 || l.g > 0).flatMap((l) => [...(l.tiposIds || [])].reverse()));
+    return comEstoque.length ? comEstoque : ret(e.tiposCaixa || []);
+  };
+  const abrir = (p) => { const u = p.precoCx > 0 || !p.precoKg ? "cx" : "kg"; const t = tiposDaEntrada(p.id)[0]?.id; setEd({ k: novoId("I"), produtoId: p.id, nome: p.nome, unidade: u, qtd: u === "cx" ? "1" : "", preco: txtReais(u === "cx" ? p.precoCx : p.precoKg), vai: false, tipo: t || "", cxq: "" }); };
   const trocaU = (u) => { const p = c.prod.get(ed.produtoId); setEd({ ...ed, unidade: u, meia: false, qtd: u === "cx" ? "1" : "", preco: txtReais(u === "cx" ? p.precoCx : p.precoKg) }); };
   const edOk = ed && Number.isFinite(totI(ed)) && totI(ed) >= 0 && cxOk(ed);
   const semPreco = itens.filter((i) => !(totI(i) > 0)).length;
@@ -166,8 +172,9 @@ function Pdv({ s, c, sessao }) {
   };
   useEffect(() => { const h = (e) => at.f(e); addEventListener("keydown", h); return () => removeEventListener("keydown", h); }, []);
   useEffect(() => { focoBusca(); }, []);
-  const tiposProd = ed ? (c.estoque.get(ed.produtoId)?.tiposCaixa || []).map((id) => tiposRet.find((t) => t.id === id)).filter(Boolean) : [];
-  const outros = tiposRet.filter((t) => !tiposProd.some((x) => x.id === t.id));
+  const tiposProd = ed ? tiposDaEntrada(ed.produtoId) : [];
+  // só os tipos que vieram na entrada deste produto; sem entrada com tipo, mostra todos
+  const opcoesCx = tiposProd.length ? tiposProd : tiposRet;
   const clis = s.clientes.filter((x) => x.ativo !== false && (`${x.nome} ${x.telefone || ""}`).toLowerCase().includes(bCli.trim().toLowerCase())).slice(0, 40);
   return html`<div class="pdv">
     <section style="display:flex;flex-direction:column;gap:10px;min-width:0">
@@ -200,7 +207,7 @@ function Pdv({ s, c, sessao }) {
       ${ed.vai ? html`<div class="card" style="background:var(--surface)">
         ${tiposRet.length ? html`<small class="txt">${tiposProd.length ? "Caixas que vieram com este produto" : "Tipos de caixa"}</small>
           ${(ed.cxs || []).length ? html`<div class="chips">${ed.cxs.map((x, j) => html`<span class="tag" style="font-size:.9rem;padding:6px 10px">✓ ${x.q} ${nomeT(x.tipo)} <button class="btn ghost sm" style="min-height:22px;padding:0 6px" aria-label="Tirar" onClick=${() => setEd({ ...ed, cxs: ed.cxs.filter((_, y) => y !== j) })}>✕</button></span>`)}</div>` : null}
-          <div class="chips">${[...tiposProd, ...outros].map((t) => html`<button class=${ed.tipo === t.id ? "on" : ""} onClick=${() => setEd({ ...ed, tipo: t.id })}>${t.nome}</button>`)}</div>
+          <div class="chips">${opcoesCx.map((t) => html`<button class=${ed.tipo === t.id ? "on" : ""} onClick=${() => setEd({ ...ed, tipo: t.id })}>${t.nome}</button>`)}</div>
           <${Campo} r="Quantas caixas vazias vão" d="Escolha o tipo, digite a quantidade e aperte Enter. Depois pode registrar outro tipo."><div style="display:flex;gap:6px"><input inputmode="numeric" value=${ed.cxq} onInput=${(e) => setEd({ ...ed, cxq: e.target.value })} onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); registrarCx(); } }}/><button class="btn out" disabled=${!pendOk(ed)} onClick=${registrarCx}>+ Registrar</button></div></${Campo}>
           ${!cliente ? html`<p class="av">Para levar caixa, escolha o cliente da venda.</p>` : null}` : html`<p class="av">Nenhum tipo de caixa cadastrado (Caixaria).</p>`}
       </div>` : null}
