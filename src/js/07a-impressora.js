@@ -34,7 +34,6 @@ function imprimirCupom(alvo, cfgTeste) {
 #area-impressao .cupom-imp a{text-decoration:none}
 #area-impressao .cupom-imp svg{filter:brightness(0)}
 @page{margin:0}
-${larg < 70 ? "#area-impressao .cupom-imp .item{grid-template-columns:minmax(0,1fr) auto}#area-impressao .cupom-imp .item .n{grid-column:1/-1}" : ""}
 @media print{
   html,body{background:#fff!important;margin:0!important;padding:0!important;width:${larg}mm;min-height:0!important}
   body>*:not(#area-impressao){display:none!important}
@@ -71,11 +70,9 @@ function ImpressoraConfig() {
       <div class="par"><span>Bobina</span><span>${cfg.largura} mm</span></div>
       <div class="par"><span>Área útil</span><span>${util} mm</span></div>
       <div class="par"><span>Letra</span><span>${cfg.fonte}px</span></div><hr/>
-      <div class="item cab-item"><span class="n">PRODUTO</span><span>QTD x PREÇO</span><span class="r">TOTAL</span></div>
-      <div class="item"><span class="n">Pimentão 1ª</span><span>5 cx x 85,00</span><span class="r">425,00</span></div>
-      <div class="item"><span class="n">Tomate 1ª</span><span>3,500 kg x 6,50</span><span class="r">22,75</span></div>
-      <div class="item"><span class="n">Batata Doce</span><span>½ cx x 65,00</span><span class="r">32,50</span></div><hr/>
-      <div class="par"><b>TOTAL</b><b>R$ 480,25</b></div><hr/>
+      <div>Pimentão 1ª</div><div class="par"><span>2 cx x 75,00</span><span>150,00</span></div>
+      <div>Tomate</div><div class="par"><span>3,500 kg x 6,50</span><span>22,75</span></div><hr/>
+      <div class="par"><b>TOTAL</b><b>R$ 172,75</b></div><hr/>
       <div class="c">1234567890123456789012345678901234567890<br/>Se a linha acima cortar, diminua a letra.</div>
     </div>
     <p class="txt"><b>Para imprimir sem abrir a janela de impressão</b> (no computador): veja a seção "Imprimir direto" no LEIA-IMPRESSORA do projeto.</p>

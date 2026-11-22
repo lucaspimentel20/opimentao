@@ -345,7 +345,7 @@ function Comprovante({ s, c, id }) {
   const tit = c.titulos.find((t) => t.vendaId === v.id);
   const deve = cli ? c.clientes.get(cli.id)?.deve || 0 : 0;
   const q = (i) => (i.unidade === "cx" ? (i.meias ? (i.caixas ? i.caixas + " cx + " : "") + "½ cx" : i.caixas + " cx") : i.unidade === "meia" ? (i.meias || 1) + " × ½ cx (" + kg(i.gramas) + ")" : kg(i.gramas));
-  const txt = ["*O Pimentão — Hortifrúti*", `Comprovante nº ${numVenda(v.id)} — ${dataHora(v.criadoEm)}`, `Cliente: ${cli?.nome || "Consumidor"}`, "",
+  const txt = ["*O Pimentão — Hortifruti*", `Comprovante nº ${numVenda(v.id)} — ${dataHora(v.criadoEm)}`, `Cliente: ${cli?.nome || "Consumidor"}`, "",
     ...v.itens.map((i) => `${c.prod.get(i.produtoId)?.nome}: ${q(i)} x ${reais(i.preco)} = ${reais(i.total)}` + cxDe(i).map((x) => `\n  + ${x.q} caixa(s) ${c.tipos.get(x.tipoId)?.nome || ""} — devolver`).join("")),
     "", v.desconto ? `Desconto: -${reais(v.desconto)}` : "", `*Total: ${reais(v.total)}*`, ...v.pagamentos.map((p) => `${FORMAS[p.forma]}: ${reais(p.valor)}`),
     v.prazo ? `Fiado: ${reais(v.prazo)}${v.vencimento ? " (vence " + dataBR(v.vencimento) + ")" : ""}` : "", v.prazo ? `Saldo em aberto: ${reais(deve)}` : "", "", "Comprovante sem valor fiscal. Obrigado pela preferência!"].filter((l, k, a) => l !== "" || a[k - 1] !== "").join("\n");
@@ -361,13 +361,12 @@ function Comprovante({ s, c, id }) {
       ${gestor && v.status !== "cancelada" ? (sess && !sess.fechamento ? html`<button class="btn out" disabled=${oc} onClick=${reabrir}>Reabrir nota</button>` : html`<button class="btn out" disabled title="O caixa desta venda já foi fechado">Reabrir nota (caixa fechado)</button>`) : null}
       ${gestor && v.status !== "cancelada" ? html`<button class="btn red" onClick=${() => setCanc(true)}>Cancelar venda</button>` : null}</div></div>
     <div class="cupom">
-      <div class="c"><${Pimentao} t=${36}/><br/><b style="font-family:Fredoka;font-size:20px">O Pimentão</b><br/>HORTIFRÚTI</div><hr/>
+      <div class="c"><${Pimentao} t=${36}/><br/><b style="font-family:Fredoka;font-size:20px">O Pimentão</b><br/>HORTIFRUTI</div><hr/>
       <div class="c"><b>COMPROVANTE DE VENDA<br/>NÃO É DOCUMENTO FISCAL</b></div>
       ${v.status === "cancelada" ? html`<div class="c" style="border:2px solid #111;margin-top:6px"><b>${v.reaberta ? "REABERTA PARA ALTERAÇÃO" : "CANCELADA — " + v.cancelamento?.motivo}</b>${v.reaberta ? (() => { const pd = s.pedidos.find((x) => x.id === v.pedidoReaberto); return pd?.vendaId ? html`<br/><a class="link" href=${"#venda-" + pd.vendaId}>Ver a venda nova ${numVenda(pd.vendaId)}</a>` : html`<br/><small>Está nas notas em aberto do caixa</small>`; })() : null}</div>` : null}<hr/>
       <div class="par"><span>Nº ${numVenda(v.id)}</span><span>${dataHora(v.criadoEm)}</span></div>
       <div>${sess?.nome || ""} · ${nomePessoa(s, v.operadorId)}</div><div>Cliente: ${cli?.nome || "Consumidor não identificado"}</div><hr/>
-      <div class="item cab-item"><span class="n">PRODUTO</span><span>QTD x PREÇO</span><span class="r">TOTAL</span></div>
-      ${v.itens.map((i) => html`<div class="item"><span class="n">${c.prod.get(i.produtoId)?.nome}</span><span>${q(i)} x ${(i.preco / 100).toFixed(2).replace(".", ",")}</span><span class="r">${(i.total / 100).toFixed(2).replace(".", ",")}</span></div>${cxDe(i).map((x) => html`<div>+ ${x.q} caixa(s) ${c.tipos.get(x.tipoId)?.nome || ""} — DEVOLVER</div>`)}`)}
+      ${v.itens.map((i) => html`<div>${c.prod.get(i.produtoId)?.nome}</div><div class="par"><span>${q(i)} x ${(i.preco / 100).toFixed(2).replace(".", ",")}</span><span>${(i.total / 100).toFixed(2).replace(".", ",")}</span></div>${cxDe(i).map((x) => html`<div>+ ${x.q} caixa(s) ${c.tipos.get(x.tipoId)?.nome || ""} — DEVOLVER</div>`)}`)}
       <hr/><div class="par"><span>Subtotal</span><span>${reais(v.subtotal)}</span></div>
       ${v.desconto ? html`<div class="par"><span>Desconto</span><span>-${reais(v.desconto)}</span></div>` : null}
       <div class="par"><b>TOTAL</b><b>${reais(v.total)}</b></div><hr/>

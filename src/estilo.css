@@ -108,7 +108,6 @@ tr:last-child td{border-bottom:none}
 .cupom hr{border:none;border-top:1px dashed #111;margin:6px 0}
 .cupom .par{display:flex;justify-content:space-between;gap:8px}
 .cupom .c{text-align:center}
-.cupom .item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;column-gap:10px;align-items:baseline}.cupom .item .n{overflow-wrap:anywhere}.cupom .item .r{text-align:right;min-width:7ch}.cupom .cab-item{font-size:.85em;font-weight:800;border-bottom:1px dashed #111;margin-bottom:2px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#1F2A1A;color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;z-index:80;max-width:90vw}
 .toast.e{background:#8F1414}
 .resumo-t table{font-size:12.5px}.resumo-t th,.resumo-t td{padding:5px 6px;white-space:nowrap}.resumo-t td.pq{white-space:normal;width:100%;vertical-align:top}.pq-g{display:grid;grid-template-columns:repeat(3,minmax(0,150px));column-gap:20px}.pq-g span{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dotted var(--border);padding:1px 0;font-size:13px;white-space:nowrap;overflow:hidden}.pq-g span i{font-style:normal;overflow:hidden;text-overflow:ellipsis}.pq-g span b{font-variant-numeric:tabular-nums}
