@@ -54,7 +54,7 @@ function imprimirAgora(alvo, cfgTeste, fim) {
   st.textContent = regras();
   document.head.appendChild(st); document.body.appendChild(area);
   let feito = false;
-  const limpar = () => { if (feito) return; feito = true; area.remove(); st.remove(); removeEventListener("afterprint", limpar); setTimeout(fim, 300); };
+  const limpar = () => { if (feito) return; feito = true; area.remove(); st.remove(); removeEventListener("afterprint", limpar); setTimeout(fim, 2500); }; // dá tempo da impressora terminar antes da próxima
   addEventListener("afterprint", limpar);
   setTimeout(() => { window.print(); setTimeout(limpar, 1500); }, 50); // na janela do caixa o print() volta na hora; o afterprint também limpa
 

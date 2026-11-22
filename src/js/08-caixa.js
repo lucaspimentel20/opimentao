@@ -142,6 +142,7 @@ function Pdv({ s, c, sessao }) {
   const addItem = () => { if (!edOk) return; setItens(itens.some((x) => x.k === ed.k) ? itens.map((x) => (x.k === ed.k ? ed : x)) : [...itens, ed]); setEd(null); setBusca(""); focoBusca(); };
   const enterAdd = (e) => { if (e.key === "Enter") { e.preventDefault(); addItem(); } };
   const podeReceber = itens.length && total > 0 && !semPreco;
+  useEffect(() => { S.vendendo = itens.length > 0; if (!itens.length && S.novaVersao) verificarVersao(); return () => { S.vendendo = false; }; }, [itens.length]);
   // nota de despacho do jeito que está, SEM fechar a venda (pode ter item sem preço; não mexe em estoque, caixa nem fiado)
   const imprimirConta = () => {
     if (!itens.length) return;

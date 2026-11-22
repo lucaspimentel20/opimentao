@@ -35,6 +35,7 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
+  if (url.searchParams.has("verificar")) return; // checagem de versão nova: sempre da internet
   if (req.mode === "navigate" && url.origin === location.origin) return e.respondWith(paginaPrimeiroRede(req));
   if (url.origin === location.origin || EXTERNOS.test(req.url)) return e.respondWith(guardadoPrimeiro(req));
 });

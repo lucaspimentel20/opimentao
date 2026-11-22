@@ -13,6 +13,7 @@ const dataBR = (d) => { if (!d) return ""; const x = d.length === 10 ? new Date(
 const dataHora = (d) => d ? new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
 const hora = (d) => d ? new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
 const somaDias = (iso, n) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+const VERSAO_APP = "__VERSAO__";
 const novoId = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
 const numVenda = (id) => id.slice(1, 9);
 const agora = () => new Date().toISOString();

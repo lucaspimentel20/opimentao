@@ -10,7 +10,8 @@ const ler = (p) => readFileSync(join(raiz, p), "utf8");
 const css = ler("src/estilo.css");
 const partes = readdirSync(join(raiz, "src/js")).filter((f) => f.endsWith(".js")).sort();
 const js = partes.map((f) => ler("src/js/" + f)).join("\n");
-const html = ler("src/pagina.html").replace("/*@@CSS@@*/", () => css).replace("//@@JS@@", () => js);
+const versao = new Date().toISOString().replace(/[-:TZ.]/g, "").slice(0, 14);
+const html = ler("src/pagina.html").replace("/*@@CSS@@*/", () => css).replace("//@@JS@@", () => js).replaceAll("__VERSAO__", versao);
 
 mkdirSync(join(raiz, "dist"), { recursive: true });
 writeFileSync(join(raiz, "dist/index.html"), html);

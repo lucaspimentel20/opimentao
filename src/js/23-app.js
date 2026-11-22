@@ -45,6 +45,19 @@ function App() {
 }
 render(html`<${App}/>`, document.getElementById("app"));
 iniciar();
+// atualiza sozinho quando sai versão nova (só quando não há venda em andamento no caixa)
+async function verificarVersao() {
+  if (!navigator.onLine || VERSAO_APP.startsWith("__")) return;
+  try {
+    const t = await fetch(location.pathname + "?verificar=" + Date.now(), { cache: "no-store" }).then((r) => (r.ok ? r.text() : ""));
+    const nova = (t.match(/const VERSAO_APP = "(\d+)"/) || [])[1];
+    if (!nova || nova === VERSAO_APP) return;
+    if (S.vendendo) { S.novaVersao = true; avisar(); return; } // espera terminar a venda
+    location.reload();
+  } catch { }
+}
+setInterval(verificarVersao, 3 * 60 * 1000);
+addEventListener("focus", () => setTimeout(verificarVersao, 1000));
 // guarda o sistema no aparelho (abre e vende sem internet)
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).then((reg) => {
