@@ -1,10 +1,27 @@
 // ============ ESTOQUE ============
+// mercadoria que rendeu (ex.: sobra ao reembalar): entra no estoque SEM CUSTO para a firma
+function RendeuForm({ s, onFechar }) {
+  const [f, setF] = useState({ produtoId: "", caixas: "", obs: "Rendeu" }); const [oc, rodar] = useAcao(); const [chave] = useState(novoId("C"));
+  const pr = s.produtos.find((p) => p.id === f.produtoId); const n = Number(String(f.caixas).replace(",", "."));
+  return html`<${Modal} titulo="Mercadoria que rendeu" sub="Entra no estoque com custo ZERO (não é compra). Na venda, ela dá lucro cheio." onFechar=${onFechar} rod=${html`<button class="btn out" onClick=${onFechar}>Cancelar</button><button class="btn" disabled=${!pr || !(n > 0) || oc} onClick=${() => rodar(async () => {
+    if (!Number.isInteger(n)) throw new Error("Lance caixas inteiras (ex.: 2).");
+    const itens = [{ loteId: novoId("T"), produtoId: pr.id, caixas: n, pesoCaixaG: pr.pesoCaixaG || 1000, valor: 0, frete: 0, comissao: 0, custoFinal: 0, valorCaixa: 0, tipos: [], embalagem: "caixa" }];
+    const dia = hojeComercial();
+    await gravar("compras", chave, { rendeu: true, fornecedorId: "", obs: f.obs.trim() || "Rendeu", valorTotal: 0, frete: 0, comissao: 0, fretePorCaixa: 0, comissaoPorCaixa: 0, rateio: "valor_por_caixa", status: "confirmada", localId: null, localModo: "um", numeroNota: "", dataCompra: dia, dataRecebimento: dia, fretePagoSessaoId: null, itens, criadoEm: agora(), criadoPor: S.eu });
+    onFechar();
+  }, "Lançado no estoque sem custo")}>Lançar ${n > 0 ? String(f.caixas).replace(".", ",") + " cx" : ""}</button>`}>
+    <${Campo} r="Produto"><${Sel} valor=${f.produtoId} set=${(v) => setF({ ...f, produtoId: v })} vazio="Escolha" opcoes=${s.produtos.filter((p) => p.ativo !== false).map((p) => [p.id, p.nome])}/></${Campo}>
+    <div class="grade"><${Campo} r="Quantas caixas"><input inputmode="decimal" value=${f.caixas} onInput=${(e) => setF({ ...f, caixas: e.target.value })} placeholder="0"/></${Campo}>
+    <${Campo} r="Observação"><input value=${f.obs} onInput=${(e) => setF({ ...f, obs: e.target.value })}/></${Campo}></div>
+  </${Modal}>`;
+}
 function Estoque({ s, c }) {
+  const [rendeu, setRendeu] = useState(false);
   const gestor = papelDe(s) === "gestor";
   const [b, setB] = useState(""); const [ver, setVer] = useState(null); const [preco, setPreco] = useState(null); const [inv, setInv] = useState(null);
   const ps = s.produtos.filter((p) => p.nome.toLowerCase().includes(b.trim().toLowerCase())).sort((a, z) => a.nome.localeCompare(z.nome));
   const valor = Math.round([...c.estoque.values()].reduce((a, e) => a + e.valor, 0) * 100);
-  return html`<div class="pag"><div class="cab"><h1>Estoque</h1><input placeholder="🔎 Buscar" value=${b} onInput=${(e) => setB(e.target.value)} style="max-width:240px"/></div>
+  return html`<div class="pag"><div class="cab"><h1>Estoque</h1><div class="acoes">${papelDe(s) === "gestor" ? html`<button class="btn out" onClick=${() => setRendeu(true)}>+ Mercadoria que rendeu</button>` : null}<input placeholder="🔎 Buscar" value=${b} onInput=${(e) => setB(e.target.value)} style="max-width:240px"/></div></div>${rendeu ? html`<${RendeuForm} s=${s} onFechar=${() => setRendeu(false)}/>` : null}
     <div class="grade"><${Num} r="Mercadoria em estoque" v=${reais(valor)} d="pelo custo + frete"/><${Num} r="Abaixo do mínimo" v=${[...c.estoque.values()].filter((e) => e.baixo).length}/></div>
     <div class="card">${ps.length ? html`<div class="tab"><table><thead><tr><th>Produto</th><th class="r">Saldo</th><th class="r">Total</th><th class="r">Custo cx / kg</th><th class="r">Venda cx / kg</th>${gestor ? html`<th class="r">Sugerido cx / kg</th>` : null}<th></th></tr></thead><tbody>${ps.map((p) => { const e = c.estoque.get(p.id); return html`<tr class=${p.ativo === false ? "risc" : ""}><td><button class="link" onClick=${() => setVer(p)}>${p.nome}</button> ${e.cx < 0 || e.g < 0 ? html`<span class="tag red">Negativo</span>` : e.baixo ? html`<span class="tag warn">Baixo</span>` : null}</td><td class="r"><b style=${e.cx < 0 || e.g < 0 ? "color:var(--err)" : ""}>${saldoTxt(e.cx, e.g)}</b></td><td class="r">${kg(e.totalG, 1)}</td><td class="r">${e.custoCx != null ? reais(Math.round(e.custoCx * 100)) + " / " + reais(Math.round(e.custoKg * 100)) : "—"}</td><td class="r">${reais(p.precoCx || 0)} / ${reais(p.precoKg || 0)}</td>${gestor ? html`<td class="r">${e.sugCx != null ? reais(e.sugCx) + " / " + reais(e.sugKg) : "—"}</td>` : null}<td style="white-space:nowrap">${gestor ? html`<button class="btn ghost" onClick=${() => setPreco(p)}>Preço</button><button class="btn ghost" onClick=${() => setInv(p)}>Inventário</button>` : null}</td></tr>`; })}</tbody></table></div>` : html`<${Vazio}>Nenhum produto.</${Vazio}>`}</div>
     ${ver ? html`<${Modal} grande titulo=${ver.nome} sub=${"Saldo: " + saldoTxt(c.estoque.get(ver.id).cx, c.estoque.get(ver.id).g)} onFechar=${() => setVer(null)}>

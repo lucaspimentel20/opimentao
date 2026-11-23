@@ -32,7 +32,7 @@ function Painel({ s, c }) {
   const despesas = -s.movCaixa.filter((m) => m.tipo === "despesa" && per.mov(m)).reduce((a, m) => a + m.valor, 0);
   const top = new Map(); for (const v of vs) v.itens.forEach((i, k) => { const t = top.get(i.produtoId) || { cx: 0, g: 0, rec: 0, custo: 0 }; t.cx += i.caixas; t.g += i.gramas; t.rec += i.total; t.custo += c.custoVenda.get(v.id)?.itens[k]?.custo ?? i.custo ?? 0; top.set(i.produtoId, t); });
   const tops = [...top.entries()].sort((a, b) => b[1].rec - a[1].rec).slice(0, 10);
-  const pendConf = s.compras.filter((x) => x.status !== "cancelada" && !c.conf.get(x.id)).length;
+  const pendConf = s.compras.filter((x) => x.status !== "cancelada" && !x.rendeu && !c.conf.get(x.id)).length;
   const divConf = s.conferencias.filter((x) => x.status === "divergente" && !x.resolucao).length;
   const devendo = s.clientes.map((cl) => ({ ...cl, ...c.clientes.get(cl.id) })).filter((x) => x.deve > 0).sort((a, b) => b.deve - a.deve);
   return html`<div class="pag">

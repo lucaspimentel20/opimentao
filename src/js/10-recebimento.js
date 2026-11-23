@@ -78,7 +78,7 @@ function Recebimento({ s, c }) {
   const nf = (id) => s.fornecedores.find((f) => f.id === id)?.nome || "";
   const notaTxt = (x) => (x ? nf(x.fornecedorId) + (x.numeroNota ? " nº " + x.numeroNota : "") + " (" + dataBR(x.dataRecebimento) + ")" : "");
   const recM = recebidoMap(s); const rec = (k) => recM.get(k) || 0;
-  const pend = s.compras.filter((x) => x.status !== "cancelada" && !c.conf.get(x.id)).sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : 1));
+  const pend = s.compras.filter((x) => x.status !== "cancelada" && !x.rendeu && !c.conf.get(x.id)).sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : 1));
   const totNota = (x) => x.itens.reduce((a, i) => a + i.caixas, 0);
   const totRec = (x) => x.itens.reduce((a, i) => { const tps = tiposDo(i); return a + (tps.length ? tps.reduce((b, t) => b + rec(x.id + "|" + i.loteId + "|" + t.tipoCaixaId), 0) : rec(x.id + "|" + i.loteId + "|")); }, 0);
   const sel = pend.filter((x) => marc.includes(x.id));

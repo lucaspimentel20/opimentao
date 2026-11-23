@@ -154,3 +154,14 @@ test("valor pendente fora de nota: entra no saldo do cliente e é baixado pelo r
   assert.equal(c.estoque.get("P1").cx, 10);            // não mexe no estoque
   assert.equal(c.sess.get("S1").dinheiro, 5000 + 10000); // só o recebimento entra no caixa
 });
+
+test("mercadoria que rendeu: entra no estoque com custo zero e a venda dela não tem custo", () => {
+  const s = base();
+  s.compras.push({ id: "R1", rendeu: true, criadoEm: new Date().toISOString(), itens: [{ loteId: "LR", produtoId: "P1", caixas: 2, pesoCaixaG: 10000, custoFinal: 0 }] });
+  const e = M.calcular(s).estoque.get("P1");
+  assert.equal(e.cx, 12);
+  assert.equal(e.valor, 1000);            // o valor do estoque não muda: as 2 cx valem zero
+  // vende 12 cx (PEPS): 10 da entrada (R$ 100 cada) + 2 que renderam (R$ 0)
+  const r = M.consumir(M.calcular(s), "P1", 12, 0);
+  assert.equal(r.custo, 1000);
+});

@@ -141,5 +141,5 @@ tr:last-child td{border-bottom:none}
 .cupom .saldo-aberto span:last-child{font-size:1.75em;line-height:1.15}
 /* nome do cliente em destaque no cupom */
 .cupom .cli-cupom{margin:6px 0 2px;line-height:1.1}
-.cupom .cli-cupom small{display:block;font-size:.8em;letter-spacing:1px}
-.cupom .cli-cupom b{display:block;font-size:1.6em;font-weight:900!important;text-transform:uppercase;overflow-wrap:anywhere}
+.cupom .cli-cupom small{font-size:1em;font-weight:800;letter-spacing:.5px}
+.cupom .cli-cupom b{font-size:1.5em;font-weight:900!important;text-transform:uppercase;overflow-wrap:anywhere}
