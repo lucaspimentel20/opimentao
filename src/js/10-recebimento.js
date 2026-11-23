@@ -139,6 +139,19 @@ function Recebimento({ s, c }) {
     // mantém as notas que ainda faltam marcadas; limpa só o que foi digitado
     setCel({}); setSplit({}); setAbrir({}); setObs(""); setChave(novoId("R"));
   }, "Chegada gravada: o que você digitou foi para \"Já recebido\"");
+  const recebeuTudo = (x) => rodar(async () => {
+    if (!confirm(`Confirmar que chegou TUDO da ${notaTxt(x)} (${totNota(x) - totRec(x)} cx que faltavam)?`)) return;
+    const loc = s.locais.find((l) => l.id === x.localId) || s.locais.filter((l) => l.ativo !== false)[0] || { id: "geral", nome: "Recebido" };
+    const itens = []; const novo = new Map(recM);
+    for (const i of x.itens) { const tps = tiposDo(i);
+      const partes = tps.length ? tps.map((t) => ({ tipo: t.tipoCaixaId, nota: t.caixas })) : [{ tipo: "", nota: i.caixas }];
+      for (const p of partes) { const k = x.id + "|" + i.loteId + "|" + p.tipo; const falta = p.nota - (recM.get(k) || 0); if (falta > 0) { itens.push({ itemId: i.loteId, produtoId: i.produtoId, tipo: p.tipo, q: falta }); novo.set(k, (novo.get(k) || 0) + falta); } } }
+    const ch = novoId("R");
+    if (itens.length) await gravar("chegadas", ch + "_" + loc.id + "_" + x.id, { chegadaId: ch + "_" + loc.id, caminhao: loc.nome, localId: loc.id, compraId: x.id, itens, obs: "Recebeu tudo", criadoPor: S.eu, criadoEm: agora() });
+    const r2 = (k) => novo.get(k) || 0;
+    await fecharNota({ ...s, chegadas: [...s.chegadas, { compraId: x.id, caminhao: loc.nome }] }, x, r2, { chegadaId: ch, caminhao: loc.nome }, "Recebeu tudo");
+    setMarc(marc.filter((y) => y !== x.id));
+  }, "Nota recebida completa ✅");
   const div = s.conferencias.filter((x) => x.status === "divergente" && !x.resolucao);
   const todas = listaChegadas(s);
   const grupos = new Map();
@@ -158,7 +171,7 @@ function Recebimento({ s, c }) {
     </div>
     <div class="card"><div class="cab"><h2>2. Notas que estão chegando</h2>${pend.length ? html`<div class="acoes"><button class="btn ghost sm" onClick=${() => setMarc(pend.map((x) => x.id))}>Marcar todas</button><button class="btn ghost sm" onClick=${() => setMarc([])}>Desmarcar</button></div>` : null}</div>
       <p class="txt">A mesma nota pode chegar em partes, em caminhões diferentes. Ela fica aqui até chegar tudo.</p>
-      ${pend.length ? html`<div class="tab"><table><thead><tr><th></th><th>Nota</th><th>Produtos</th><th class="r">Recebido</th><th></th></tr></thead><tbody>${pend.map((x) => { const tn = totNota(x), tr = totRec(x); return html`<tr><td style="cursor:pointer" onClick=${() => setMarc(marc.includes(x.id) ? marc.filter((y) => y !== x.id) : [...marc, x.id])}><input type="checkbox" style="width:20px;min-height:20px;height:20px" checked=${marc.includes(x.id)}/></td><td style="cursor:pointer" onClick=${() => setMarc(marc.includes(x.id) ? marc.filter((y) => y !== x.id) : [...marc, x.id])}><b>${notaTxt(x)}</b><br/>${tr ? html`<span class="tag warn">Recebendo em partes</span>` : html`<span class="tag gray">Nada chegou ainda</span>`}</td><td>${x.itens.map((i) => `${c.prod.get(i.produtoId)?.nome} ${i.caixas}`).join(" · ")}</td><td class="r"><b>${tr}</b> de ${tn} cx</td><td>${tr ? html`<button class="btn ghost sm" onClick=${() => { setEncerrar(x.id); setMotEnc(""); }}>Encerrar (o resto não vem)</button>` : null}</td></tr>`; })}</tbody></table></div>` : html`<${Vazio}>Nenhuma nota esperando. Registre a nota em Entrada primeiro.</${Vazio}>`}
+      ${pend.length ? html`<div class="tab"><table><thead><tr><th></th><th>Nota</th><th>Produtos</th><th class="r">Recebido</th><th></th></tr></thead><tbody>${pend.map((x) => { const tn = totNota(x), tr = totRec(x); return html`<tr><td style="cursor:pointer" onClick=${() => setMarc(marc.includes(x.id) ? marc.filter((y) => y !== x.id) : [...marc, x.id])}><input type="checkbox" style="width:20px;min-height:20px;height:20px" checked=${marc.includes(x.id)}/></td><td style="cursor:pointer" onClick=${() => setMarc(marc.includes(x.id) ? marc.filter((y) => y !== x.id) : [...marc, x.id])}><b>${notaTxt(x)}</b><br/>${tr ? html`<span class="tag warn">Recebendo em partes</span>` : html`<span class="tag gray">Nada chegou ainda</span>`}</td><td>${x.itens.map((i) => `${c.prod.get(i.produtoId)?.nome} ${i.caixas}`).join(" · ")}</td><td class="r"><b>${tr}</b> de ${tn} cx</td><td style="white-space:nowrap"><button class="btn sm" disabled=${oc} onClick=${() => recebeuTudo(x)}>✅ Recebeu tudo</button> ${tr ? html`<button class="btn ghost sm" onClick=${() => { setEncerrar(x.id); setMotEnc(""); }}>Encerrar (o resto não vem)</button>` : null}</td></tr>`; })}</tbody></table></div>` : html`<${Vazio}>Nenhuma nota esperando. Registre a nota em Entrada primeiro.</${Vazio}>`}
     </div>
     ${linhas.length ? html`<div class="card"><div class="cab"><h2>3. O que chegou agora</h2>${cols.length === 1 ? html`<button class="btn out sm" onClick=${() => { const n = {}; linhas.forEach((r) => (n[ck(r, cols[0])] = r.falta ? String(r.falta) : "")); setCel(n); setSplit({}); }}>Chegou tudo que falta (${cols[0].nome})</button>` : null}</div>
       <p class="txt">Digite em cada coluna quantas caixas vieram daquele local (pode somar: 20+20). Enter vai para a próxima célula. Deixe em branco o que não veio.</p>
