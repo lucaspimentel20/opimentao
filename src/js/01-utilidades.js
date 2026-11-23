@@ -14,6 +14,10 @@ const dataHora = (d) => d ? new Date(d).toLocaleString("pt-BR", { day: "2-digit"
 const hora = (d) => d ? new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
 const somaDias = (iso, n) => { const d = new Date(iso + "T12:00:00"); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const VERSAO_APP = "__VERSAO__";
+// meia caixa: 1 meia = "½ cx"; mais de uma = "3 × ½ cx" (o preço é de cada meia)
+const meiaTxt = (n) => (Number(n) > 1 ? n + " × ½ cx" : "½ cx");
+// caixas inteiras + meia: 2 e meia = "2½ cx"
+const cxMeiaTxt = (caixas, meias) => (caixas || "") + (meias ? "½" : "") + " cx";
 // nome de uma conta do fiado: venda ou valor lançado fora de nota
 const nomeTitulo = (t) => (t.avulso ? "Fora de nota: " + t.descricao : "Venda " + numVenda(t.vendaId));
 const novoId = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
