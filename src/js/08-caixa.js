@@ -337,7 +337,8 @@ function Caixa({ s, c }) {
 
 function Comprovante({ s, c, id }) {
   const v = s.vendas.find((x) => x.id === id);
-  const [canc, setCanc] = useState(false); const [mot, setMot] = useState(""); const [oc, rodar] = useAcao(); const [regEnt, setRegEnt] = useState(false); const [marcEnt, setMarcEnt] = useState(false);
+  const [canc, setCanc] = useState(false); const [mot, setMot] = useState(""); const [oc, rodar] = useAcao(); const [pdfOc, rodarPdfWa] = useAcao();
+  useEffect(() => { carregarScript("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js").catch(() => {}); carregarScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js").catch(() => {}); }, []); const [regEnt, setRegEnt] = useState(false); const [marcEnt, setMarcEnt] = useState(false);
   // reabrir: a venda vira nota em aberto com os mesmos itens (o estoque continua baixado)
   const reabrir = () => rodar(async () => {
     const tt = c.titulos.find((t) => t.vendaId === v.id);
@@ -379,7 +380,8 @@ function Comprovante({ s, c, id }) {
     <div class="cab"><h1>Venda ${numVenda(v.id)}</h1><div class="acoes">
       <button class="btn" onClick=${() => imprimirCupom(".cupom")}>🖨️ Imprimir</button>
       <button class="btn out" onClick=${() => imprimirDespacho(v, c)}>📦 Nota de despacho</button>
-      <a class="btn out" href=${wa} target="_blank" rel="noreferrer">WhatsApp</a>
+      <button class="btn" disabled=${pdfOc} onClick=${() => rodarPdfWa(() => enviarNotaPdf(".cupom", { nomeArquivo: "Nota-" + numVenda(v.id) + ".pdf", fone: fone ? (fone.length <= 11 ? "55" + fone : fone) : "", texto: "O Pimentão — nota nº " + numVenda(v.id) + " · total " + reais(v.total) + (v.prazo ? " · saldo em aberto " + reais(deve) : "") }))}>${pdfOc ? "Gerando PDF…" : "📄 Enviar PDF no WhatsApp"}</button>
+      <a class="btn out" href=${wa} target="_blank" rel="noreferrer">WhatsApp (texto)</a>
       <button class="btn out" onClick=${() => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Comprovante copiado"), () => toast("Não deu para copiar", true))}>Copiar texto</button>
       <a class="btn out" href="#caixa">Nova venda</a>
       ${v.status !== "cancelada" && !v.entrega ? html`<button class="btn out" onClick=${() => setMarcEnt(true)}>Marcar para entregar</button>` : null}

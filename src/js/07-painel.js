@@ -3,10 +3,10 @@
 function usePeriodo(s, deInicial) {
   const abertos = s.sessoes.filter((x) => !x.fechamento);
   const [modo, setModo] = useState(abertos.length ? "caixa" : "datas");
-  const [de, setDe] = useState(deInicial || hojeISO()); const [ate, setAte] = useState(hojeISO());
+  const [de, setDe] = useState(deInicial || hojeComercial()); const [ate, setAte] = useState(hojeComercial());
   const ids = new Set(abertos.map((x) => x.id)); const desde = abertos.map((x) => x.abertoEm).filter(Boolean).sort()[0] || agora();
   const temCaixa = abertos.length > 0; const m = temCaixa ? modo : "datas";
-  const naData = (iso) => { const d = diaDe(iso); return d >= de && d <= ate; };
+  const naData = (iso) => { const d = diaComercial(iso); return d >= de && d <= ate; }; // dia vira ao meio-dia
   return {
     modo: m, temCaixa,
     venda: (v) => (m === "caixa" ? ids.has(v.sessaoId) : naData(v.criadoEm)),
@@ -21,8 +21,8 @@ function Painel({ s, c }) {
   const vendas = vs.reduce((a, v) => a + v.total, 0);
   const custo = Math.round(vs.reduce((a, v) => a + (c.custoVenda.get(v.id)?.custo ?? v.custo ?? 0), 0) * 100);
   const perdas = Math.round(s.movEstoque.filter((m) => m.tipo === "desperdicio" && per.mov(m)).reduce((a, m) => a + (m.custo || 0), 0) * 100);
-  const hoje = hojeISO();
-  const vendasHoje = s.vendas.filter((v) => v.status !== "cancelada" && diaDe(v.criadoEm) === hoje).reduce((a, v) => a + v.total, 0);
+  const hoje = hojeComercial();
+  const vendasHoje = s.vendas.filter((v) => v.status !== "cancelada" && diaComercial(v.criadoEm) === hoje).reduce((a, v) => a + v.total, 0);
   const aReceber = c.titulos.reduce((a, t) => a + Math.max(0, t.saldo), 0);
   const vencido = c.titulos.filter((t) => t.vencido).reduce((a, t) => a + t.saldo, 0);
   const valorEst = Math.round([...c.estoque.values()].reduce((a, e) => a + e.valor, 0) * 100);

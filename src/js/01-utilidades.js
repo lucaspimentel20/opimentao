@@ -9,6 +9,10 @@ const paraGramas = (t) => { const s = String(t ?? "").trim().replace(",", "."); 
 const txtReais = (c) => (c > 0 ? (c / 100).toFixed(2).replace(".", ",") : "");
 const hojeISO = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
 const diaDe = (iso) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date(iso));
+// dia de vendas do Pimentão: vira ao MEIO-DIA (12h às 12h do dia seguinte). Ex.: venda às 01:00 do dia 23 conta no dia 22.
+const VIRADA_HORA = 12;
+const diaComercial = (iso) => diaDe(new Date(new Date(iso).getTime() - VIRADA_HORA * 3600000).toISOString());
+const hojeComercial = () => diaComercial(new Date().toISOString());
 const dataBR = (d) => { if (!d) return ""; const x = d.length === 10 ? new Date(d + "T12:00:00") : new Date(d); return x.toLocaleDateString("pt-BR"); };
 const dataHora = (d) => d ? new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
 const hora = (d) => d ? new Date(d).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";

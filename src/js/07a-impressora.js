@@ -128,3 +128,39 @@ function imprimirDespacho(v, c) {
   </div>`, el);
   return imprimirCupom(el.firstElementChild);
 }
+
+// ---- nota em PDF, no mesmo formato do cupom impresso (para mandar pelo WhatsApp) ----
+async function pdfDoCupom(alvo, nomeArquivo) {
+  await carregarScript("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
+  await carregarScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
+  const cfg = impConfig(); const larg = 80, mg = 3, util = larg - 2 * mg;
+  const el = typeof alvo === "string" ? document.querySelector(alvo) : alvo;
+  if (!el) throw new Error("Não achei a nota para gerar o PDF.");
+  const caixa = document.createElement("div");
+  caixa.style.cssText = `position:fixed;left:-10000px;top:0;background:#fff;width:${larg}mm;padding:4mm 0`;
+  const cp = el.cloneNode(true); cp.removeAttribute("style"); cp.classList.add("cupom-pdf");
+  cp.style.cssText = `width:${util}mm;max-width:none;margin:0 ${mg}mm;padding:0;border:0;box-shadow:none;font-size:${cfg.fonte || 14}px;line-height:1.35;color:#000;font-weight:${cfg.negrito ? 600 : 400};background:#fff`;
+  cp.querySelectorAll("*").forEach((x) => { x.style.color = "#000"; });
+  cp.querySelectorAll("svg *").forEach((x) => { const f = x.getAttribute("fill"), st = x.getAttribute("stroke"); if (f !== "none") x.setAttribute("fill", "#000"); if (st && st !== "none") x.setAttribute("stroke", "#000"); x.removeAttribute("opacity"); }); // logo preto (html2canvas não aplica filtro)
+  caixa.appendChild(cp); document.body.appendChild(caixa);
+  try {
+    const canvas = await window.html2canvas(caixa, { scale: 3, backgroundColor: "#ffffff", logging: false });
+    const altura = (canvas.height / canvas.width) * larg;
+    const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit: "mm", format: [larg, Math.max(altura, 60)] });
+    doc.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, larg, altura);
+    const blob = doc.output("blob");
+    return new File([blob], nomeArquivo, { type: "application/pdf" });
+  } finally { caixa.remove(); }
+}
+// manda o PDF: no celular/Windows abre "Compartilhar" (escolha o WhatsApp); se não der, baixa o PDF e abre a conversa
+async function enviarNotaPdf(alvo, { nomeArquivo, fone, texto }) {
+  const arq = await pdfDoCupom(alvo, nomeArquivo);
+  if (navigator.canShare?.({ files: [arq] })) {
+    try { await navigator.share({ files: [arq], title: nomeArquivo, text: texto }); return "compartilhado"; }
+    catch (e) { if (e?.name === "AbortError") return "cancelado"; }
+  }
+  const url = URL.createObjectURL(arq); const a = document.createElement("a"); a.href = url; a.download = nomeArquivo; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+  window.open(`https://wa.me/${fone || ""}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+  toast("PDF baixado. Na conversa do WhatsApp, clique no clipe 📎 e anexe o arquivo " + nomeArquivo, false);
+  return "baixado";
+}

@@ -1,6 +1,6 @@
 // ============ RELATÓRIOS ============
 function Relatorios({ s, c }) {
-  const per = usePeriodo(s, hojeISO().slice(0, 8) + "01"); const [cli, setCli] = useState(""); const [pr, setPr] = useState(""); const [ocPdf, rodarPdf] = useAcao();
+  const per = usePeriodo(s, hojeComercial().slice(0, 8) + "01"); const [cli, setCli] = useState(""); const [pr, setPr] = useState(""); const [ocPdf, rodarPdf] = useAcao();
   const vs = s.vendas.filter((v) => { return per.venda(v) && (!cli || v.clienteId === cli) && (!pr || v.itens.some((i) => i.produtoId === pr)); }).sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1));
   const ok = vs.filter((v) => v.status !== "cancelada"); const tot = ok.reduce((a, v) => a + v.total, 0); const cus = Math.round(ok.reduce((a, v) => a + (c.custoVenda.get(v.id)?.custo ?? v.custo ?? 0), 0) * 100);
   // linhas de mercadoria: só os itens do produto escolhido (ou todos), com quantidade, preço, custo e lucro do item
@@ -58,7 +58,7 @@ function Relatorios({ s, c }) {
       <div class="c"><b>TEM PRA VENDER</b></div>
       ${tem.length ? tem.map((x) => html`<div class="par"><span>${x.nome}</span><b>${qtdCx(x.id, x.e.cx, x.e.g)}</b></div>`) : html`<div class="c">estoque zerado</div>`}<hr/>
       <div class="c"><b>VENDIDO SEM ENTRADA</b></div>
-      ${semEnt.length ? semEnt.map((r) => html`<div class="par"><span>${r.nome}</span><b>${qtdCx(r.id, r.cx, r.g)}</b></div>${qtdCx(r.id, r.est.cx, r.est.g).startsWith("-") ? html`<div class="par"><small>  falta entrada</small><small>${qtdCx(r.id, r.est.cx, r.est.g).slice(1)}</small></div>` : null}`) : html`<div class="c">nenhum</div>`}
+      ${semEnt.length ? semEnt.map((r) => html`<div class="par"><span>${r.nome}</span><b>${qtdCx(r.id, r.cx, r.g)}</b></div>`) : html`<div class="c">nenhum</div>`}
     </div>`, el);
     imprimirCupom(el.firstElementChild);
   };
