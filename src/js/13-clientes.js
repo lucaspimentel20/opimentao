@@ -46,6 +46,27 @@ function extratoFiado(s, c, cliId) {
   const nome = (t) => (t.avulso ? t.descricao : "Nota " + numVenda(t.vendaId));
   return { cl, deve: k.deve, pend, dm, nome };
 }
+// relatório de fiado (quem está devendo) no formato do cupom — para imprimir ou mandar em PDF
+function montarRelFiado(s, c) {
+  const lin = s.clientes.map((x) => { const k = c.clientes.get(x.id) || {}; const n = c.titulos.filter((t) => t.clienteId === x.id && t.saldo > 0).length; return { nome: x.nome, deve: k.deve || 0, venc: k.vencido || 0, n }; }).filter((x) => x.deve > 0).sort((a, b) => b.deve - a.deve);
+  const tot = lin.reduce((a, x) => a + x.deve, 0), totV = lin.reduce((a, x) => a + x.venc, 0);
+  const n2 = (v) => (v / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const el = document.createElement("div");
+  render(html`<div class="cupom">
+    <div class="c"><${Pimentao} t=${36}/><br/><b style="font-family:Fredoka;font-size:20px">O Pimentão</b><br/>HORTIFRUTI</div><hr/>
+    <div class="c"><b>RELATÓRIO DE FIADO</b><br/>${new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div><hr/>
+    <div class="tab3"><span class="h">CLIENTE</span><span class="h r">NOTAS</span><span class="h r">DEVE</span>
+      ${lin.map((x) => html`<span>${x.nome}${x.venc > 0 ? html` <b>VENC.</b>` : null}</span><span class="r">${x.n}</span><span class="r">${n2(x.deve)}</span>`)}</div><hr/>
+    <div class="par"><span>Clientes devendo</span><b>${lin.length}</b></div>
+    ${totV > 0 ? html`<div class="par"><span>Já vencido</span><b>R$ ${n2(totV)}</b></div>` : null}
+    <div class="saldo-aberto"><span>TOTAL EM ABERTO</span><span>R$ ${n2(tot)}</span></div>
+  </div>`, el);
+  return el.firstElementChild;
+}
+function BotoesRelFiado({ s, c }) {
+  const [oc, rodar] = useAcao(); const [aviso, setAviso] = useState(null);
+  return html`<span class="acoes" style="display:inline-flex"><button class="btn out sm" onClick=${() => imprimirCupom(montarRelFiado(s, c))}>🖨️ Imprimir fiado</button><button class="btn out sm" disabled=${oc} onClick=${() => rodar(async () => { const a = await pdfDoCupom(montarRelFiado(s, c), "Relatorio-Fiado-" + hojeISO() + ".pdf"); entregarPdfs([a]); setAviso([a.name]); })}>${oc ? "Gerando…" : "📄 Fiado em PDF"}</button>${aviso ? html`<${AvisoPdf} nomes=${aviso} onFechar=${() => setAviso(null)}/>` : null}</span>`;
+}
 function FiadosWhats({ s, c, onFechar }) {
   const devedores = s.clientes.filter((x) => (c.clientes.get(x.id)?.deve || 0) > 0).sort((a, b) => a.nome.localeCompare(b.nome));
   const [marc, setMarc] = useState(devedores.map((x) => x.id));
@@ -140,7 +161,7 @@ function Clientes({ s, c, selId }) {
     </div>`;
   }
   return html`<div class="pag">
-    ${cl ? det : html`<div class="cab"><h1>Clientes</h1><div class="acoes"><button class="btn out" onClick=${() => setTodosFiados(true)}>📤 Enviar todos os fiados</button><button class="btn" onClick=${() => setEd(null)}>+ Novo cliente</button></div></div>${todosFiados ? html`<${FiadosWhats} s=${s} c=${c} onFechar=${() => setTodosFiados(false)}/>` : null}
+    ${cl ? det : html`<div class="cab"><h1>Clientes</h1><div class="acoes"><${BotoesRelFiado} s=${s} c=${c}/><button class="btn out" onClick=${() => setTodosFiados(true)}>📤 Enviar todos os fiados</button><button class="btn" onClick=${() => setEd(null)}>+ Novo cliente</button></div></div>${todosFiados ? html`<${FiadosWhats} s=${s} c=${c} onFechar=${() => setTodosFiados(false)}/>` : null}
     <div class="card"><div class="acoes"><input placeholder="🔎 Nome ou telefone" value=${b} onInput=${(e) => setB(e.target.value)} style="max-width:320px"/><label class="chk"><input type="checkbox" checked=${so} onChange=${(e) => setSo(e.target.checked)}/>Só quem está devendo</label></div>
     ${lista.length ? html`<div class="tab"><table><thead><tr><th>Cliente</th><th>Telefone</th><th class="r">Deve</th><th class="r">Vencido</th></tr></thead><tbody>${lista.map((x) => { const k = c.clientes.get(x.id); return html`<tr class=${x.ativo === false ? "risc" : ""}><td><a class="link" href=${"#cliente-" + x.id}>${x.nome}</a></td><td>${x.telefone}</td><td class="r">${k?.deve ? reais(k.deve) : "—"}</td><td class="r">${k?.vencido ? reais(k.vencido) : "—"}</td></tr>`; })}</tbody></table></div>` : html`<${Vazio}>Nenhum cliente.</${Vazio}>`}</div>`}
     ${ed !== undefined ? html`<${ClienteForm} cl=${ed} onFechar=${() => setEd(undefined)} onSalvo=${(id) => { location.hash = "cliente-" + id; }}/>` : null}

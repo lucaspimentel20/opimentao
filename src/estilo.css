@@ -143,3 +143,7 @@ tr:last-child td{border-bottom:none}
 .cupom .cli-cupom{margin:6px 0 2px;line-height:1.1}
 .cupom .cli-cupom small{font-size:1em;font-weight:800;letter-spacing:.5px}
 .cupom .cli-cupom b{font-size:1.5em;font-weight:900!important;text-transform:uppercase;overflow-wrap:anywhere}
+/* tabela de 3 colunas nos relatórios impressos */
+.cupom .tab3{display:grid;grid-template-columns:minmax(0,1fr) auto auto;column-gap:8px}
+.cupom .tab3 .r{text-align:right}
+.cupom .tab3 .h{font-weight:800;font-size:.85em;border-bottom:1px dashed #000;padding-bottom:2px;margin-bottom:2px}
