@@ -2,7 +2,7 @@
 // Para não precisar digitar em cada aparelho, preencha aqui o endereço e a chave "anon public" do seu projeto Supabase.
 const CONFIG_URL = "https://manwesybtfxcnjdzwskf.supabase.co";
 const CONFIG_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hbndlc3lidGZ4Y25qZHp3c2tmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ3NzM1MzAsImV4cCI6MjExMDM0OTUzMH0.z2aUF3IBdclCM3tYZkl-9Ug2-DQOR-mgGjLCH2nRBGA";
-const COLS = ["produtos", "fornecedores", "clientes", "tiposCaixa", "compras", "conferencias", "vendas", "recebimentos", "movEstoque", "movCaixa", "sessoes", "movCaixaria", "chegadas", "config", "locais", "entregas", "pedidos"];
+const COLS = ["produtos", "fornecedores", "clientes", "tiposCaixa", "compras", "conferencias", "vendas", "recebimentos", "movEstoque", "movCaixa", "sessoes", "movCaixaria", "chegadas", "config", "locais", "entregas", "pedidos", "debitos"];
 const S = { pronto: false, erro: null, fase: "inicio", primeiro: false, offline: false, pendentes: 0, eu: null, euNome: "", dono: false, pessoas: [], ...Object.fromEntries(COLS.map((c) => [c, []])) };
 let SB = null, versao = 0, MAPAS = null; const ATU = new Map(); let FILA = [];
 const ouvintes = new Set();

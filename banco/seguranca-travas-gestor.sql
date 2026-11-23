@@ -9,6 +9,7 @@
 --     cancelada ou alterar itens/valores (só o endereço de entrega muda)
 --   • compras (entradas): cancelar ou corrigir uma entrada já lançada
 --   • clientes: limite de fiado
+--   • debitos (valor pendente fora de nota): lançar ou cancelar
 --   • recebimentos: estorno
 --   • conferências: resolver divergência
 --   • caixaria e estoque: ajuste de caixaria e correção pelo recebimento
@@ -68,6 +69,10 @@ begin
        or (o is not null and (n -> 'limite') is distinct from (o -> 'limite')) then
       raise exception 'Só o gestor altera o limite de fiado.';
     end if;
+  end if;
+
+  if new.col = 'debitos' then
+    raise exception 'Só o gestor lança ou cancela valor pendente fora de nota.';
   end if;
 
   if new.col = 'recebimentos' and o is not null and (n -> 'estorno') is distinct from (o -> 'estorno') then

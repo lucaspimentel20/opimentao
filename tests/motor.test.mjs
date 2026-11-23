@@ -139,3 +139,18 @@ test("divergência: pagamentos que não fecham com o total são apontados", () =
   s.vendas.push(venda(s, "V1", { cx: 1, total: 15000, pagamentos: [{ forma: "dinheiro", valor: 14000 }] }));
   assert.ok(M.calcular(s).divergencias.some((d) => /pagamentos não fecham/.test(d)));
 });
+
+test("valor pendente fora de nota: entra no saldo do cliente e é baixado pelo recebimento", () => {
+  const s = base();
+  s.debitos = [{ id: "D1", clienteId: "C1", valor: 30000, descricao: "Saldo anterior", criadoEm: ontem, status: "ativo" },
+               { id: "D2", clienteId: "C1", valor: 9999, descricao: "cancelado", criadoEm: ontem, status: "cancelado" }];
+  assert.equal(M.calcular(s).clientes.get("C1").deve, 30000);
+  s.recebimentos.push({ id: "R1", sessaoId: "S1", forma: "dinheiro", valor: 10000, alocacoes: [{ vendaId: "D1", valor: 10000 }] });
+  const c = M.calcular(s);
+  const t = c.titulos.find((x) => x.vendaId === "D1");
+  assert.equal(t.avulso, true);
+  assert.equal(t.saldo, 20000);
+  assert.equal(c.clientes.get("C1").deve, 20000);
+  assert.equal(c.estoque.get("P1").cx, 10);            // não mexe no estoque
+  assert.equal(c.sess.get("S1").dinheiro, 5000 + 10000); // só o recebimento entra no caixa
+});

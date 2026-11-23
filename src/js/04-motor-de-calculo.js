@@ -48,6 +48,12 @@ function calcular(s) {
     const p = pago.get(v.id) || 0; const saldo = v.prazo - p;
     return { vendaId: v.id, clienteId: v.clienteId, valor: v.prazo, pago: p, saldo, venc: v.vencimento, criadoEm: v.criadoEm, status: saldo <= 0 ? "quitado" : p > 0 ? "parcial" : "aberto", vencido: saldo > 0 && !!v.vencimento && v.vencimento < hoje };
   });
+  // valor pendente lançado direto no cliente, fora de nota (ex.: saldo anterior)
+  for (const d of s.debitos || []) {
+    if (d.status === "cancelado" || !(d.valor > 0)) continue;
+    const p = pago.get(d.id) || 0; const saldo = d.valor - p;
+    titulos.push({ vendaId: d.id, avulso: true, descricao: d.descricao || "Valor pendente", clienteId: d.clienteId, valor: d.valor, pago: p, saldo, venc: d.vencimento || null, criadoEm: d.criadoEm, status: saldo <= 0 ? "quitado" : p > 0 ? "parcial" : "aberto", vencido: saldo > 0 && !!d.vencimento && d.vencimento < hoje });
+  }
   const clientes = new Map(s.clientes.map((c) => [c.id, { deve: 0, vencido: 0, comprou: 0 }]));
   for (const t of titulos) { const c = clientes.get(t.clienteId); if (c) { c.deve += Math.max(0, t.saldo); if (t.vencido) c.vencido += t.saldo; } }
   for (const v of s.vendas) if (v.status !== "cancelada") { const c = clientes.get(v.clienteId); if (c) c.comprou += v.total; }
@@ -84,7 +90,7 @@ function calcular(s) {
     if (pg + (v.prazo || 0) !== v.total) divergencias.push(`Venda ${numVenda(v.id)}: pagamentos não fecham com o total`);
   }
   for (const r of s.recebimentos) { const al = (r.alocacoes || []).reduce((a, x) => a + x.valor, 0); if (al !== r.valor) divergencias.push(`Recebimento ${r.id}: valor não alocado por inteiro`); }
-  for (const t of titulos) if (t.saldo < 0) divergencias.push(`Venda ${numVenda(t.vendaId)}: recebido acima do valor a prazo`);
+  for (const t of titulos) if (t.saldo < 0) divergencias.push(`${nomeTitulo(t)}: recebido acima do valor a prazo`);
   // custo das vendas: item vendido antes da entrada (estoque negativo) pega o custo da entrada que chegou depois
   const lotesReais = new Map(); for (const l of [...lotes].sort((a, b) => (a.data < b.data ? -1 : 1))) if (!String(l.id).startsWith("N-")) { if (!lotesReais.has(l.produtoId)) lotesReais.set(l.produtoId, []); lotesReais.get(l.produtoId).push(l); }
   const custoVenda = new Map(); const sessoesMap = new Map(s.sessoes.map((x) => [x.id, x]));
