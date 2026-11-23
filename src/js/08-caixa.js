@@ -396,7 +396,18 @@ function Comprovante({ s, c, id }) {
       ${v.desconto ? html`<div class="par"><span>Desconto</span><span>-${reais(v.desconto)}</span></div>` : null}
       <div class="par"><b>TOTAL</b><b>${reais(v.total)}</b></div><hr/>
       ${v.pagamentos.map((p) => html`<div class="par"><span>${FORMAS[p.forma]}</span><span>${reais(p.valor)}</span></div>`)}
-      ${v.prazo ? html`<div class="par"><b>FIADO NESTA NOTA${v.vencimento ? " (venc. " + dataBR(v.vencimento) + ")" : ""}</b><b>${reais(v.prazo)}</b></div><div class="saldo-aberto"><span>SALDO EM ABERTO</span><span>${reais(deve)}</span></div><div class="c"><br/>______________________<br/>Assinatura do cliente</div>` : null}
+      ${v.prazo ? html`<div class="par"><b>FIADO NESTA NOTA${v.vencimento ? " (venc. " + dataBR(v.vencimento) + ")" : ""}</b><b>${reais(v.prazo)}</b></div><div class="saldo-aberto"><span>SALDO EM ABERTO</span><span>${reais(deve)}</span></div>${(() => {
+        // contas pendentes do cliente, da mais antiga para a mais nova (até 12 linhas)
+        const pend = c.titulos.filter((t) => t.clienteId === v.clienteId && t.saldo > 0).sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : 1));
+        if (!pend.length) return null;
+        const n2 = (x) => (x / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        const dm = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "");
+        const mostra = pend.slice(0, 12), resto = pend.slice(12);
+        return html`<div class="c"><b>CONTAS PENDENTES</b></div><div class="par"><b>Data</b><b>Falta</b></div>
+          ${mostra.map((t) => { const nome = t.avulso ? (t.descricao.length > 16 ? t.descricao.slice(0, 15) + "…" : t.descricao) : "Nota " + numVenda(t.vendaId); const esta = t.vendaId === v.id;
+            return html`<div class="par"><span>${esta ? html`<b>${dm(t.criadoEm)} ${nome} (esta)</b>` : `${dm(t.criadoEm)} ${nome}`}${t.vencido ? html` <b>VENC.</b>` : null}</span><span>${n2(t.saldo)}</span></div>`; })}
+          ${resto.length ? html`<div class="par"><span>+ ${resto.length} outras contas</span><span>${n2(resto.reduce((a, t) => a + t.saldo, 0))}</span></div>` : null}`;
+      })()}<div class="c"><br/>______________________<br/>Assinatura do cliente</div>` : null}
       ${se ? html`<hr/><div class="c"><b>${se.status === "entregue" ? "ENTREGUE" : "PARA ENTREGAR"}</b>${v.entrega.endereco ? html`<br/>${v.entrega.endereco}` : null}${v.entrega.previsao ? html`<br/>Até ${dataBR(v.entrega.previsao)}` : null}</div>` : null}
       <hr/><div class="c"><b>Obrigado pela preferência!</b></div>
     </div>
