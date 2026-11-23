@@ -98,9 +98,10 @@ async function temInternet() {
   if (!navigator.onLine) return false;
   try { const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 4000); const r = await fetch(lerConfig().url + "/auth/v1/health", { headers: { apikey: lerConfig().key }, signal: ctl.signal, cache: "no-store" }); clearTimeout(t); return r.ok; } catch { return false; }
 }
-addEventListener("online", () => { S.offline = false; avisar(); sincronizar(); });
+addEventListener("online", () => { S.offline = false; avisar(); sincronizar().then(() => { if (!lerFila().length) return lerDocs().then(avisar); }).catch(() => {}); });
 addEventListener("offline", () => { S.offline = true; avisar(); });
 setInterval(() => { if (lerFila().length) sincronizar(); }, 20000);
+setInterval(() => { if (S.pronto && navigator.onLine && !lerFila().length && !sincronizando && Date.now() - (S.atualizadoEm || 0) > 110000) lerDocs().then(avisar).catch(() => {}); }, 120000);
 S.pendentes = lerFila().length;
 
 async function iniciar() {
@@ -160,6 +161,7 @@ async function lerDocs() {
   }
   MAPAS = tudo; lerFila().forEach(aplicarLocal); COLS.forEach((c) => (S[c] = [...tudo[c].values()]));
   const f = FILA; FILA = []; f.forEach(aplicar);
+  S.dadosDaCopia = false; S.atualizadoEm = Date.now();
   guardarCopia();
 }
 let jaConectou = false, CANAL = null;
@@ -170,7 +172,7 @@ function ouvir() {
     .on("postgres_changes", { event: "*", schema: "public", table: "docs" }, (p) => aplicar(p.new))
     .on("postgres_changes", { event: "*", schema: "public", table: "usuarios" }, () => carregarUsuarios().then(avisar).catch(() => {}))
     .subscribe((st) => {
-      if (st === "SUBSCRIBED") { sincronizar(); if (jaConectou) { lerDocs().then(avisar).catch(() => {}); carregarUsuarios().then(avisar).catch(() => {}); } jaConectou = true; S.offline = false; }
+      if (st === "SUBSCRIBED") { sincronizar(); if (jaConectou || S.dadosDaCopia) { lerDocs().then(avisar).catch(() => {}); carregarUsuarios().then(avisar).catch(() => {}); } jaConectou = true; S.offline = false; }
       else if (st === "CHANNEL_ERROR" || st === "TIMED_OUT" || st === "CLOSED") S.offline = true;
       avisar();
     });
@@ -190,7 +192,7 @@ async function carregar(uid) {
     if (!eu || !eu.ativo) { S.fase = "bloqueado"; avisar(); return; }
     try { ouvir(); } catch (e) { console.warn("tempo real:", e); S.offline = true; }
     try { await lerDocs(); }
-    catch (e) { if (!(await lerCopia())) throw e; S.offline = true; setTimeout(() => toast("Sem internet: usando os dados guardados neste aparelho. As vendas serão enviadas quando a internet voltar."), 300); }
+    catch (e) { if (!(await lerCopia())) throw e; S.offline = true; S.dadosDaCopia = true; setTimeout(() => toast("Sem internet: usando os dados guardados neste aparelho. As vendas serão enviadas quando a internet voltar."), 300); }
     S.pronto = true; S.fase = "app"; avisar();
     sincronizar();
   } catch (e) { S.erro = "Erro ao ler os dados: " + erroBR(e); avisar(); }
