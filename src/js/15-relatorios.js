@@ -83,22 +83,25 @@ function Relatorios({ s, c }) {
   const fin = { nota: ents.reduce((a, e) => a + e.nota, 0), frete: ents.reduce((a, e) => a + e.frete, 0), cx: ents.filter((e) => !e.rendeu).reduce((a, e) => a + e.cx, 0), rendeuCx: ents.filter((e) => e.rendeu).reduce((a, e) => a + e.cx, 0), vendas: tot, custo: cus };
   fin.lucro = fin.vendas - fin.custo; fin.margem = fin.vendas ? ((fin.lucro / fin.vendas) * 100).toFixed(1).replace(".", ",") + "%" : "—";
   const imprimirFinanceiro = () => {
+    const n2 = (v) => (v / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    // uma linha por fornecedor (notas do mesmo fornecedor somadas)
+    const porForn = new Map(); for (const e of ents) { const k = e.forn; const r = porForn.get(k) || { forn: k, cx: 0, nota: 0, rendeu: e.rendeu }; r.cx += e.cx; r.nota += e.nota; porForn.set(k, r); }
+    const linhas = [...porForn.values()];
     const el = document.createElement("div");
     render(html`<div class="cupom">
-      <div class="c"><b>O PIMENTÃO</b><br/>ENTRADAS E LUCRO</div>
+      <div class="c"><b>O PIMENTÃO</b><br/>RELATÓRIO</div>
       <div class="c">${per.texto}<br/>Impresso ${new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</div><hr/>
-      <div class="c"><b>ENTRADAS</b></div>
-      ${ents.filter((e) => !e.rendeu).map((e) => html`<div><b>${e.forn}</b> · ${e.cx} cx</div><div class="par"><span>  Nota</span><span>${reais(e.nota)}</span></div>${e.frete ? html`<div class="par"><span>  Frete</span><span>${reais(e.frete)}</span></div>` : null}`)}
-      ${!ents.some((e) => !e.rendeu) ? html`<div class="c">nenhuma entrada</div>` : null}<hr/>
-      <div class="par"><span>Valor das notas</span><b>${reais(fin.nota)}</b></div>
-      <div class="par"><span>Frete</span><b>${reais(fin.frete)}</b></div>
-      <div class="par"><b>CUSTO DAS ENTRADAS</b><b>${reais(fin.nota + fin.frete)}</b></div>
-      ${fin.rendeuCx ? html`<div class="par"><span>Sem custo (produção/rendeu)</span><b>${fin.rendeuCx} cx</b></div>` : null}<hr/>
-      <div class="c"><b>APURADO</b></div>
-      <div class="par"><span>Vendido</span><b>${reais(fin.vendas)}</b></div>
-      <div class="par"><span>Custo do vendido</span><b>${reais(fin.custo)}</b></div>
-      <div class="saldo-aberto"><span>LUCRO</span><span>${reais(fin.lucro)}</span></div>
-      <div class="c">margem ${fin.margem}</div>
+      <span class="sec">1. ENTRADAS</span><span class="sub">(valor da nota de cada fornecedor)</span>
+      ${linhas.length ? html`<div class="tab3"><span class="h">FORNECEDOR</span><span class="h r">CX</span><span class="h r">VALOR</span>
+        ${linhas.map((r) => html`<span>${r.rendeu ? r.forn.replace(" (sem custo)", "") : r.forn}</span><span class="r">${r.cx}</span><span class="r">${r.rendeu ? "sem custo" : n2(r.nota)}</span>`)}</div>` : html`<div class="c">nenhuma entrada</div>`}<hr/>
+      <div class="par"><span>Total das notas</span><span>${n2(fin.nota)}</span></div>
+      <div class="par"><span>Frete</span><span>+ ${n2(fin.frete)}</span></div>
+      <div class="saldo-aberto" style="margin-top:4px"><span>CUSTO DAS ENTRADAS</span><span>R$ ${n2(fin.nota + fin.frete)}</span></div>
+      <span class="sec" style="margin-top:12px">2. APURADO</span><span class="sub">(só da mercadoria que foi vendida)</span>
+      <div class="par"><span>Venda</span><span>${n2(fin.vendas)}</span></div>
+      <div class="par"><span>Custo da venda</span><span>− ${n2(fin.custo)}</span></div>
+      <div class="saldo-aberto" style="margin-top:4px"><span>LUCRO</span><span>R$ ${n2(fin.lucro)}</span></div>
+      <div class="c">margem de ${fin.margem}</div>
     </div>`, el);
     imprimirCupom(el.firstElementChild);
   };
@@ -122,7 +125,7 @@ function Relatorios({ s, c }) {
   };
 
   const perdas = new Map(); for (const m of s.movEstoque) if (m.tipo === "desperdicio") { if (per.mov(m)) perdas.set(m.produtoId, (perdas.get(m.produtoId) || 0) + m.custo); }
-  return html`<div class="pag"><div class="cab"><h1>Relatórios</h1><div class="acoes"><button class="btn" onClick=${imprimirResumo}>🖨️ Imprimir resumo</button><button class="btn out" onClick=${imprimirFinanceiro}>🖨️ Entradas e lucro</button><${BotoesRelFiado} s=${s} c=${c}/></div></div>
+  return html`<div class="pag"><div class="cab"><h1>Relatórios</h1><div class="acoes"><button class="btn" onClick=${imprimirResumo}>🖨️ Imprimir resumo</button><button class="btn out" onClick=${imprimirFinanceiro}>🖨️ Relatório (entradas e apurado)</button><${BotoesRelFiado} s=${s} c=${c}/></div></div>
     <div class="card">${per.seletor}<div class="grade"><${Campo} r="Cliente"><${Sel} valor=${cli} set=${setCli} vazio="Todos" opcoes=${s.clientes.map((x) => [x.id, x.nome])}/></${Campo}><${Campo} r="Produto"><${Sel} valor=${pr} set=${setPr} vazio="Todos" opcoes=${s.produtos.map((x) => [x.id, x.nome])}/></${Campo}></div><div class="nao-imprimir" style="margin-top:10px"><button class="btn" disabled=${ocPdf} onClick=${() => rodarPdf(relatorioGeral, "PDF baixado")}>${ocPdf ? "Gerando…" : "📄 Relatório geral (PDF)"}</button> <small style="color:var(--muted)">clientes que pagaram · clientes no fiado · quem está devendo</small></div></div>
     ${pr ? (() => { const t = porProd.get(pr) || { cx: 0, g: 0, rec: 0, custo: 0, n: 0 }; const cu = Math.round(t.custo * 100); return html`<div class="grade"><${Num} r=${"Vendido de " + (c.prod.get(pr)?.nome || "")} v=${reais(t.rec)} d=${qtdCx(pr, t.cx, t.g) + " em " + t.n + " venda(s)"} tom="bom"/><${Num} r="Custo" v=${reais(cu)}/><${Num} r="Lucro da mercadoria" v=${reais(t.rec - cu)} tom=${t.rec - cu >= 0 ? "bom" : "ruim"} d=${t.rec ? "margem " + (((t.rec - cu) / t.rec) * 100).toFixed(1) + "%" : ""}/></div>`; })() : null}
     <div class="grade" style=${pr ? "display:none" : ""}><${Num} r="Vendas" v=${reais(tot)} d=${ok.length + " vendas"}/><${Num} r="Custo" v=${reais(cus)}/><${Num} r="Lucro bruto" v=${reais(tot - cus)} tom=${tot - cus >= 0 ? "bom" : "ruim"} d=${tot ? "margem " + (((tot - cus) / tot) * 100).toFixed(1) + "%" : ""}/></div>
