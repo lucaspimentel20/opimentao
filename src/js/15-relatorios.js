@@ -43,15 +43,22 @@ function Relatorios({ s, c }) {
   const imprimirResumo = () => {
     const q = (cx, g) => [cx ? cx + " cx" : "", g ? kg(g) : ""].filter(Boolean).join(" + ") || "0";
     const vend = [...porProd].map(([id, t]) => ({ nome: c.prod.get(id)?.nome || "Produto", q: qtdCx(id, t.cx, t.g) })).sort((a, b) => a.nome.localeCompare(b.nome));
-    const tem = s.produtos.filter((p) => !pr || p.id === pr).map((p) => ({ id: p.id, nome: p.nome, e: c.estoque.get(p.id) || { cx: 0, g: 0 } })).filter((x) => x.e.cx > 0 || x.e.g > 0).sort((a, b) => a.nome.localeCompare(b.nome));
-    const totTem = () => tem.reduce((a, x) => a + Math.max(0, emCx(x.id, x.e.cx, x.e.g)), 0);
-    // tudo que está com estoque negativo = vendido sem entrada (ainda falta dar entrada)
-    const faltaEnt = s.produtos.filter((p) => !pr || p.id === pr).map((p) => { const e = c.estoque.get(p.id) || { cx: 0, g: 0 }; const t = qtdCx(p.id, e.cx, e.g); return { nome: p.nome, q: t.slice(1), neg: t.startsWith("-") }; }).filter((x) => x.neg).sort((a, b) => a.nome.localeCompare(b.nome));
     // total geral em caixas (kg viram caixa pelo peso de cada produto)
     const emCx = (pid, cx, g) => { const peso = c.prod.get(pid)?.pesoCaixaG || 0; return (cx || 0) + (peso ? (g || 0) / peso : 0); };
     const totTxt = (n) => { const m = Math.round(n * 2) / 2; return (Math.abs(n - m) < 0.02 ? (Math.trunc(m) || (m % 1 ? "" : "0")) + (m % 1 ? "½" : "") : n.toFixed(1).replace(".", ",")) + " cx"; };
     const totEnt = resumoLista.reduce((a, r) => a + (r.entCx || 0), 0);
     const totVend = [...porProd].reduce((a, [id, t]) => a + emCx(id, t.cx, t.g), 0);
+    // SÓ O PERÍODO (ex.: hoje): tem pra vender = entrada − vendido − notas em aberto; o que passar da entrada = vendido sem entrada
+    const notasP = new Map(); let nNotas = 0;
+    for (const p of s.pedidos) if (p.status === "aberto" && (!cli || p.clienteId === cli) && per.mov({ criadoEm: p.criadoEm || p.atualizadoEm })) { let teve = false; for (const d of p.consumo || []) { if (d.abre || !d.produtoId || (pr && d.produtoId !== pr)) continue; notasP.set(d.produtoId, (notasP.get(d.produtoId) || 0) + emCx(d.produtoId, -(d.cx || 0), -(d.g || 0))); teve = true; } if (teve) nNotas++; }
+    const saldoP = new Map();
+    for (const r of resumoLista) if (r.entCx) saldoP.set(r.id, (saldoP.get(r.id) || 0) + r.entCx);
+    for (const [id, t] of porProd) saldoP.set(id, (saldoP.get(id) || 0) - emCx(id, t.cx, t.g));
+    for (const [id, q] of notasP) saldoP.set(id, (saldoP.get(id) || 0) - q);
+    const linhaP = (id, n) => ({ id, nome: c.prod.get(id)?.nome || "Produto", q: totTxt(n), n });
+    const tem = [...saldoP].filter(([, n]) => n > 0.01).map(([id, n]) => linhaP(id, n)).sort((a, b) => a.nome.localeCompare(b.nome));
+    const faltaEnt = [...saldoP].filter(([, n]) => n < -0.01).map(([id, n]) => linhaP(id, -n)).sort((a, b) => a.nome.localeCompare(b.nome));
+    const totTem = () => tem.reduce((a, x) => a + x.n, 0);
     const agoraTxt = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
     const el = document.createElement("div");
     render(html`<div class="cupom resumo-imp">
@@ -63,9 +70,9 @@ function Relatorios({ s, c }) {
       <div class="c"><b>VENDIDO</b></div>
       ${vend.length ? vend.map((x) => html`<div class="par"><span>${x.nome}</span><b>${x.q}</b></div>`) : html`<div class="c">nada vendido</div>`}
       <div class="par"><b>TOTAL</b><b>${totTxt(totVend)}</b></div><hr/>
-      <div class="c"><b>TEM PRA VENDER</b></div>
-      ${tem.length ? tem.map((x) => html`<div class="par"><span>${x.nome}</span><b>${qtdCx(x.id, x.e.cx, x.e.g)}</b></div>`) : html`<div class="c">estoque zerado</div>`}<div class="par"><b>TOTAL</b><b>${totTxt(totTem())}</b></div><hr/>
-      <div class="c"><b>VENDIDO SEM ENTRADA</b><br/><small>(falta dar entrada)</small></div>
+      <div class="c"><b>TEM PRA VENDER</b><br/><small>(entrada − vendido do período)</small></div>
+      ${tem.length ? tem.map((x) => html`<div class="par"><span>${x.nome}</span><b>${x.q}</b></div>`) : html`<div class="c">nada sobrando</div>`}<div class="par"><b>TOTAL</b><b>${totTxt(totTem())}</b></div>${nNotas ? html`<div class="c"><small>(já descontadas ${nNotas} nota${nNotas > 1 ? "s" : ""} em aberto)</small></div>` : null}<hr/>
+      <div class="c"><b>VENDIDO SEM ENTRADA</b><br/><small>(vendeu mais do que entrou)</small></div>
       ${faltaEnt.length ? faltaEnt.map((x) => html`<div class="par"><span>${x.nome}</span><b>${x.q}</b></div>`) : html`<div class="c">nenhum</div>`}
     </div>`, el);
     imprimirCupom(el.firstElementChild);
