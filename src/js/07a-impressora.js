@@ -188,6 +188,23 @@ async function compartilharArquivos(arqs, titulo) {
   try { await navigator.share({ files: arqs, title: titulo }); return "ok"; }
   catch (e) { if (e?.name === "AbortError") return "cancelado"; if (e?.name === "NotAllowedError") return "clique"; console.warn(e); return "sem"; }
 }
+// PDFs para o WhatsApp do computador: salva na pasta Downloads e abre o aplicativo do WhatsApp
+function entregarPdfs(arqs) {
+  arqs.forEach((a, i) => setTimeout(() => baixarArquivo(a), i * 450));
+  setTimeout(() => { try { location.href = "whatsapp://send"; } catch { } }, arqs.length * 450 + 400);
+}
+function AvisoPdf({ nomes, onFechar }) {
+  return html`<${Modal} titulo="📄 PDF salvo — agora é no WhatsApp" onFechar=${onFechar} rod=${html`<button class="btn" onClick=${onFechar}>Entendi</button>`}>
+    <ol class="txt" style="line-height:1.7;font-size:1.05rem;margin:0 0 0 18px">
+      <li>O <b>WhatsApp</b> do computador vai abrir (se o Chrome perguntar, clique em <b>Abrir WhatsApp</b>).</li>
+      <li>Entre no <b>grupo Financeiro</b> (ou na conversa do cliente).</li>
+      <li>Clique no <b>📎 clipe</b> › <b>Documento</b>.</li>
+      <li>Abra a pasta <b>Downloads</b> e escolha ${nomes.length > 1 ? html`os arquivos (segure <b>Ctrl</b> e clique em cada um, ou <b>Ctrl+A</b> para todos)` : "o arquivo"} › <b>Abrir</b> › <b>Enviar</b>.</li>
+    </ol>
+    <div class="card" style="margin-top:8px"><b>${nomes.length > 1 ? nomes.length + " arquivos salvos:" : "Arquivo salvo:"}</b><br/><small>${nomes.slice(0, 12).join(" · ")}${nomes.length > 12 ? " …" : ""}</small></div>
+    ${nomes.length > 1 ? html`<p class="txt">Se o Chrome perguntar sobre <b>baixar vários arquivos</b>, clique em <b>Permitir</b>.</p>` : null}
+  </${Modal}>`;
+}
 function baixarArquivo(arq) { const u = URL.createObjectURL(arq); const a = document.createElement("a"); a.href = u; a.download = arq.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
 // manda o PDF: no celular/Windows abre "Compartilhar" (escolha o WhatsApp); se não der, baixa o PDF e abre a conversa
 async function enviarNotaPdf(alvo, { nomeArquivo, fone, texto }) {

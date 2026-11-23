@@ -337,7 +337,7 @@ function Caixa({ s, c }) {
 
 function Comprovante({ s, c, id }) {
   const v = s.vendas.find((x) => x.id === id);
-  const [canc, setCanc] = useState(false); const [mot, setMot] = useState(""); const [oc, rodar] = useAcao(); const [pdfOc, rodarPdfWa] = useAcao(); const [pdfPronto, setPdfPronto] = useState(null);
+  const [canc, setCanc] = useState(false); const [mot, setMot] = useState(""); const [oc, rodar] = useAcao(); const [pdfOc, rodarPdfWa] = useAcao(); const [avisoPdf, setAvisoPdf] = useState(null);
   useEffect(() => { carregarScript("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js").catch(() => {}); carregarScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js").catch(() => {}); }, []); const [regEnt, setRegEnt] = useState(false); const [marcEnt, setMarcEnt] = useState(false);
   // reabrir: a venda vira nota em aberto com os mesmos itens (o estoque continua baixado)
   const reabrir = () => rodar(async () => {
@@ -381,12 +381,10 @@ function Comprovante({ s, c, id }) {
       <button class="btn out" onClick=${() => imprimirDespacho(v, c)}>📦 Nota de despacho</button>
       <button class="btn" disabled=${pdfOc} onClick=${() => rodarPdfWa(() => enviarNotaWhats(".cupom", { fone, texto: txt }))}>${pdfOc ? "Preparando…" : "📲 Enviar no WhatsApp"}</button>
       <button class="btn out" disabled=${pdfOc} onClick=${() => rodarPdfWa(async () => {
-        const arq = pdfPronto || await pdfDoCupom(".cupom", "Nota-" + numVenda(v.id) + "-" + (cli?.nome || "Consumidor").replace(/[^A-Za-zÀ-ú0-9]+/g, "-") + ".pdf");
-        const r = await compartilharArquivos([arq], "Nota " + numVenda(v.id));
-        if (r === "clique") { setPdfPronto(arq); toast("PDF pronto. Clique de novo em 'Compartilhar PDF' para escolher o grupo."); return; }
-        setPdfPronto(null);
-        if (r === "sem") { baixarArquivo(arq); toast("Este computador não abriu o Compartilhar; o PDF foi baixado na pasta Downloads."); }
-      })}>${pdfPronto ? "📤 Compartilhar agora" : "📤 Compartilhar PDF"}</button>
+        const arq = await pdfDoCupom(".cupom", "Nota-" + numVenda(v.id) + "-" + (cli?.nome || "Consumidor").replace(/[^A-Za-zÀ-ú0-9]+/g, "-") + ".pdf");
+        entregarPdfs([arq]); setAvisoPdf([arq.name]);
+      })}>${pdfOc ? "Gerando PDF…" : "📄 PDF para o WhatsApp"}</button>
+      ${avisoPdf ? html`<${AvisoPdf} nomes=${avisoPdf} onFechar=${() => setAvisoPdf(null)}/>` : null}
       <button class="btn out" onClick=${() => abrirWhatsApp(fone, txt)}>WhatsApp (texto)</button>
       <button class="btn out" onClick=${() => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Comprovante copiado"), () => toast("Não deu para copiar", true))}>Copiar texto</button>
       <a class="btn out" href="#caixa">Nova venda</a>
