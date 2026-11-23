@@ -2,11 +2,13 @@
 // A configuração é de cada aparelho (fica guardada no navegador), porque cada
 // computador ou celular tem a sua impressora.
 const IMP_CHAVE = "pimentao.impressora";
-const IMP_PADRAO = { largura: 80, margem: 3, fonte: 12, vias: 1, auto: true, negrito: true, despacho: true, v: 2 };
+const IMP_PADRAO = { largura: 80, margem: 3, fonte: 14, vias: 1, auto: true, negrito: true, despacho: true, v: 3 };
 function impConfig() {
   try {
     const salvo = JSON.parse(localStorage.getItem(IMP_CHAVE) || "{}");
-    if (salvo.v !== 2) { salvo.auto = true; salvo.v = 2; localStorage.setItem(IMP_CHAVE, JSON.stringify({ ...IMP_PADRAO, ...salvo })); } // nova versão: imprime sozinho ao concluir a venda
+    if ((salvo.v || 0) < 2) salvo.auto = true; // v2: imprime sozinho ao concluir a venda
+    if ((salvo.v || 0) < 3 && (!salvo.fonte || salvo.fonte <= 12) && (salvo.largura || 80) >= 80) salvo.fonte = 14; // v3: letra maior no cupom
+    if (salvo.v !== 3) { salvo.v = 3; localStorage.setItem(IMP_CHAVE, JSON.stringify({ ...IMP_PADRAO, ...salvo })); }
     return { ...IMP_PADRAO, ...salvo };
   } catch { return { ...IMP_PADRAO }; }
 }
@@ -73,7 +75,7 @@ function ImpressoraConfig() {
   return html`<div class="card"><h2>Impressora deste aparelho</h2>
     <p class="txt">Vale só para este computador ou celular. A impressora precisa estar instalada no aparelho (no Windows: Configurações › Impressoras; no Android: um app de impressão como o RawBT).</p>
     <div class="grade">
-      <${Campo} r="Largura da bobina"><${Sel} valor=${String(cfg.largura)} set=${(v) => setCfg({ ...cfg, largura: +v, margem: +v === 58 ? 2 : 3, fonte: +v === 58 ? 11 : 12 })} opcoes=${[["80", "80 mm (mais comum no caixa)"], ["58", "58 mm (impressora pequena / portátil)"]]}/></${Campo}>
+      <${Campo} r="Largura da bobina"><${Sel} valor=${String(cfg.largura)} set=${(v) => setCfg({ ...cfg, largura: +v, margem: +v === 58 ? 2 : 3, fonte: +v === 58 ? 11 : 14 })} opcoes=${[["80", "80 mm (mais comum no caixa)"], ["58", "58 mm (impressora pequena / portátil)"]]}/></${Campo}>
       <${Campo} r="Margem de cada lado (mm)" d=${"Área impressa: " + util + " mm"}><input type="number" min="0" max="8" step="0.5" value=${cfg.margem} onInput=${(e) => mudar("margem", +e.target.value)}/></${Campo}>
       <${Campo} r="Tamanho da letra" d="Aumente se sair pequeno; diminua se cortar"><input type="number" min="9" max="16" value=${cfg.fonte} onInput=${(e) => mudar("fonte", +e.target.value)}/></${Campo}>
       <${Campo} r="Vias por venda" d="2 = uma para o cliente e uma para a loja"><${Sel} valor=${String(cfg.vias)} set=${(v) => mudar("vias", +v)} opcoes=${[["1", "1 via"], ["2", "2 vias"], ["3", "3 vias"]]}/></${Campo}>
