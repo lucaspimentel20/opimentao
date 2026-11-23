@@ -375,13 +375,12 @@ function Comprovante({ s, c, id }) {
     "", v.desconto ? `Desconto: -${reais(v.desconto)}` : "", `*Total: ${reais(v.total)}*`, ...v.pagamentos.map((p) => `${FORMAS[p.forma]}: ${reais(p.valor)}`),
     v.prazo ? `Fiado: ${reais(v.prazo)}${v.vencimento ? " (vence " + dataBR(v.vencimento) + ")" : ""}` : "", v.prazo ? `Saldo em aberto: ${reais(deve)}` : "", "", "Comprovante sem valor fiscal. Obrigado pela preferência!"].filter((l, k, a) => l !== "" || a[k - 1] !== "").join("\n");
   const fone = (cli?.telefone || "").replace(/\D/g, "");
-  const wa = `https://wa.me/${fone ? (fone.length <= 11 ? "55" + fone : fone) : ""}?text=${encodeURIComponent(txt)}`;
   return html`<div class="pag">
     <div class="cab"><h1>Venda ${numVenda(v.id)}</h1><div class="acoes">
       <button class="btn" onClick=${() => imprimirCupom(".cupom")}>🖨️ Imprimir</button>
       <button class="btn out" onClick=${() => imprimirDespacho(v, c)}>📦 Nota de despacho</button>
-      <button class="btn" disabled=${pdfOc} onClick=${() => rodarPdfWa(() => enviarNotaPdf(".cupom", { nomeArquivo: "Nota-" + numVenda(v.id) + ".pdf", fone: fone ? (fone.length <= 11 ? "55" + fone : fone) : "", texto: "O Pimentão — nota nº " + numVenda(v.id) + " · total " + reais(v.total) + (v.prazo ? " · saldo em aberto " + reais(deve) : "") }))}>${pdfOc ? "Gerando PDF…" : "📄 Enviar PDF no WhatsApp"}</button>
-      <a class="btn out" href=${wa} target="_blank" rel="noreferrer">WhatsApp (texto)</a>
+      <button class="btn" disabled=${pdfOc} onClick=${() => rodarPdfWa(() => enviarNotaPdf(".cupom", { nomeArquivo: "Nota-" + numVenda(v.id) + ".pdf", fone, texto: "O Pimentão — nota nº " + numVenda(v.id) + " · total " + reais(v.total) + (v.prazo ? " · saldo em aberto " + reais(deve) : "") }))}>${pdfOc ? "Gerando PDF…" : "📄 Enviar PDF no WhatsApp"}</button>
+      <button class="btn out" onClick=${() => abrirWhatsApp(fone, txt)}>WhatsApp (texto)</button>
       <button class="btn out" onClick=${() => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Comprovante copiado"), () => toast("Não deu para copiar", true))}>Copiar texto</button>
       <a class="btn out" href="#caixa">Nova venda</a>
       ${v.status !== "cancelada" && !v.entrega ? html`<button class="btn out" onClick=${() => setMarcEnt(true)}>Marcar para entregar</button>` : null}

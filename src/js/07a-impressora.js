@@ -23,6 +23,16 @@ function BotoesImpressao({ v, c }) {
   if (!v) return null;
   return html`<span style="white-space:nowrap"><button class="btn ghost sm" title="Reimprimir cupom" onClick=${() => reimprimirVenda(v.id)}>🖨️</button>${v.status !== "cancelada" ? html` <button class="btn ghost sm" title="Nota de despacho" onClick=${() => imprimirDespacho(v, c)}>📦</button>` : null}</span>`;
 }
+// ---- WhatsApp: abre SEMPRE na mesma janela (não recarrega a cada envio) ou no aplicativo do computador ----
+const WA_CHAVE = "pimentao.whatsapp";
+function waModo() { try { return localStorage.getItem(WA_CHAVE) || "web"; } catch { return "web"; } }
+function abrirWhatsApp(fone, texto) {
+  const tel = String(fone || "").replace(/\D/g, ""); const num = tel ? (tel.length <= 11 ? "55" + tel : tel) : "";
+  const q = (num ? "phone=" + num + "&" : "") + "text=" + encodeURIComponent(texto || "");
+  if (waModo() === "app") { location.href = "whatsapp://send?" + q; return; } // aplicativo instalado no computador
+  const w = window.open("https://web.whatsapp.com/send?" + q, "pimentao-whatsapp"); // mesma aba sempre
+  if (w) try { w.focus(); } catch { }
+}
 let FILA_IMP = Promise.resolve();
 function imprimirCupom(alvo, cfgTeste) {
   const el0 = typeof alvo === "string" || !alvo ? document.querySelector(alvo || ".cupom") : alvo;
@@ -82,6 +92,7 @@ function ImpressoraConfig() {
     </div>
     <label class="chk"><input type="checkbox" checked=${cfg.auto} onChange=${(e) => mudar("auto", e.target.checked)}/> Imprimir sozinho ao concluir a venda</label>
     <label class="chk"><input type="checkbox" checked=${cfg.despacho} onChange=${(e) => mudar("despacho", e.target.checked)}/> Imprimir também a nota de despacho (sem preços) ao concluir a venda</label>
+    <${Campo} r="WhatsApp" d="Aplicativo: o WhatsApp instalado no computador (não recarrega). Navegador: usa sempre a mesma aba do WhatsApp Web."><${Sel} valor=${waModo()} set=${(v) => { try { localStorage.setItem(WA_CHAVE, v); } catch { } toast("WhatsApp: " + (v === "app" ? "aplicativo do computador" : "WhatsApp Web (mesma aba)")); setCfg({ ...cfg }); }} opcoes=${[["web", "WhatsApp Web (navegador)"], ["app", "Aplicativo do WhatsApp no computador"]]}/></${Campo}>
     <label class="chk"><input type="checkbox" checked=${cfg.negrito} onChange=${(e) => mudar("negrito", e.target.checked)}/> Letra mais escura (recomendado em impressora térmica)</label>
     <div class="acoes">
       <button class="btn" onClick=${() => { const ok = impSalvar(cfg); toast(ok ? "Impressora salva neste aparelho" : "Este navegador não deixou salvar", !ok); }}>Salvar</button>
@@ -160,7 +171,7 @@ async function enviarNotaPdf(alvo, { nomeArquivo, fone, texto }) {
     catch (e) { if (e?.name === "AbortError") return "cancelado"; }
   }
   const url = URL.createObjectURL(arq); const a = document.createElement("a"); a.href = url; a.download = nomeArquivo; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
-  window.open(`https://wa.me/${fone || ""}?text=${encodeURIComponent(texto)}`, "_blank", "noopener");
+  abrirWhatsApp(fone, texto);
   toast("PDF baixado. Na conversa do WhatsApp, clique no clipe 📎 e anexe o arquivo " + nomeArquivo, false);
   return "baixado";
 }
