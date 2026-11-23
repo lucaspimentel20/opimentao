@@ -25,12 +25,15 @@ function BotoesImpressao({ v, c }) {
 }
 // ---- WhatsApp: abre SEMPRE na mesma janela (não recarrega a cada envio) ou no aplicativo do computador ----
 const WA_CHAVE = "pimentao.whatsapp";
+let WA_JANELA = null, WA_JANELA_NUM = "";
 function waModo() { try { return localStorage.getItem(WA_CHAVE) || "web"; } catch { return "web"; } }
 function abrirWhatsApp(fone, texto) {
   const tel = String(fone || "").replace(/\D/g, ""); const num = tel ? (tel.length <= 11 ? "55" + tel : tel) : "";
   const q = (num ? "phone=" + num + "&" : "") + "text=" + encodeURIComponent(texto || "");
   if (waModo() === "app") { location.href = "whatsapp://send?" + q; return; } // aplicativo instalado no computador
+  if (WA_JANELA && !WA_JANELA.closed && WA_JANELA_NUM === num && !texto) { try { WA_JANELA.focus(); return; } catch { } } // mesmo contato: só volta para a aba
   const w = window.open("https://web.whatsapp.com/send?" + q, "pimentao-whatsapp"); // mesma aba sempre
+  WA_JANELA = w; WA_JANELA_NUM = num;
   if (w) { try { w.focus(); } catch { } } else toast("O navegador bloqueou a janela do WhatsApp. Clique no ícone de janela bloqueada na barra de endereço e permita.", true);
 }
 let FILA_IMP = Promise.resolve();
