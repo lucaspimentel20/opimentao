@@ -31,7 +31,7 @@ function abrirWhatsApp(fone, texto) {
   const q = (num ? "phone=" + num + "&" : "") + "text=" + encodeURIComponent(texto || "");
   if (waModo() === "app") { location.href = "whatsapp://send?" + q; return; } // aplicativo instalado no computador
   const w = window.open("https://web.whatsapp.com/send?" + q, "pimentao-whatsapp"); // mesma aba sempre
-  if (w) try { w.focus(); } catch { }
+  if (w) { try { w.focus(); } catch { } } else toast("O navegador bloqueou a janela do WhatsApp. Clique no ícone de janela bloqueada na barra de endereço e permita.", true);
 }
 let FILA_IMP = Promise.resolve();
 function imprimirCupom(alvo, cfgTeste) {
@@ -141,7 +141,7 @@ function imprimirDespacho(v, c) {
 }
 
 // ---- nota em PDF, no mesmo formato do cupom impresso (para mandar pelo WhatsApp) ----
-async function pdfDoCupom(alvo, nomeArquivo) {
+async function canvasDoCupom(alvo) {
   await carregarScript("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
   await carregarScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
   if (typeof window.html2canvas !== "function" || !window.jspdf) throw new Error("O gerador de PDF ainda está carregando. Tente de novo em alguns segundos.");
@@ -157,14 +157,29 @@ async function pdfDoCupom(alvo, nomeArquivo) {
   cp.querySelectorAll("svg, svg *").forEach((x) => { x.style.filter = "none"; x.style.color = ""; });
   caixa.appendChild(cp); document.body.appendChild(caixa);
   try {
-    const canvas = await window.html2canvas(caixa, { scale: 3, backgroundColor: "#ffffff", logging: false });
-    const altura = (canvas.height / canvas.width) * larg;
-    const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit: "mm", format: [larg, Math.max(altura, 60)] });
-    doc.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, larg, altura);
-    const blob = doc.output("blob");
-    return new File([blob], nomeArquivo, { type: "application/pdf" });
+    return await window.html2canvas(caixa, { scale: 3, backgroundColor: "#ffffff", logging: false });
   } finally { caixa.remove(); }
 }
+async function pdfDoCupom(alvo, nomeArquivo) {
+  const canvas = await canvasDoCupom(alvo); const larg = 80;
+  const altura = (canvas.height / canvas.width) * larg;
+  const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit: "mm", format: [larg, Math.max(altura, 60)] });
+  doc.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, larg, altura);
+  return new File([doc.output("blob")], nomeArquivo, { type: "application/pdf" });
+}
+// WhatsApp no computador: copia a nota como IMAGEM e abre a conversa do cliente; é só Ctrl+V e Enter
+async function enviarNotaWhats(alvo, { fone, texto }) {
+  let copiou = false;
+  try {
+    // a promessa entra direto no ClipboardItem: o Chrome aceita mesmo que a imagem leve 1–2 s para ficar pronta
+    const png = canvasDoCupom(alvo).then((cv) => new Promise((ok) => cv.toBlob(ok, "image/png")));
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]); copiou = true;
+  } catch (e) { console.warn("copiar imagem:", e); }
+  abrirWhatsApp(fone, copiou ? "" : texto);
+  if (copiou) toast("✅ Nota copiada. Na conversa do WhatsApp aperte Ctrl+V e depois Enter.");
+  else toast("Não consegui copiar a imagem; mandei a nota em texto. Use 'Baixar PDF' se quiser o arquivo.", true);
+}
+function baixarArquivo(arq) { const u = URL.createObjectURL(arq); const a = document.createElement("a"); a.href = u; a.download = arq.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
 // manda o PDF: no celular/Windows abre "Compartilhar" (escolha o WhatsApp); se não der, baixa o PDF e abre a conversa
 async function enviarNotaPdf(alvo, { nomeArquivo, fone, texto }) {
   const arq = await pdfDoCupom(alvo, nomeArquivo);

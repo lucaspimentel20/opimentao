@@ -379,7 +379,8 @@ function Comprovante({ s, c, id }) {
     <div class="cab"><h1>Venda ${numVenda(v.id)}</h1><div class="acoes">
       <button class="btn" onClick=${() => imprimirCupom(".cupom")}>🖨️ Imprimir</button>
       <button class="btn out" onClick=${() => imprimirDespacho(v, c)}>📦 Nota de despacho</button>
-      <button class="btn" disabled=${pdfOc} onClick=${() => rodarPdfWa(() => enviarNotaPdf(".cupom", { nomeArquivo: "Nota-" + numVenda(v.id) + ".pdf", fone, texto: "O Pimentão — nota nº " + numVenda(v.id) + " · total " + reais(v.total) + (v.prazo ? " · saldo em aberto " + reais(deve) : "") }))}>${pdfOc ? "Gerando PDF…" : "📄 Enviar PDF no WhatsApp"}</button>
+      <button class="btn" disabled=${pdfOc} onClick=${() => rodarPdfWa(() => enviarNotaWhats(".cupom", { fone, texto: txt }))}>${pdfOc ? "Preparando…" : "📲 Enviar no WhatsApp"}</button>
+      <button class="btn out" disabled=${pdfOc} onClick=${() => rodarPdfWa(async () => baixarArquivo(await pdfDoCupom(".cupom", "Nota-" + numVenda(v.id) + ".pdf")), "PDF baixado (pasta Downloads)")}>📄 Baixar PDF</button>
       <button class="btn out" onClick=${() => abrirWhatsApp(fone, txt)}>WhatsApp (texto)</button>
       <button class="btn out" onClick=${() => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast("Comprovante copiado"), () => toast("Não deu para copiar", true))}>Copiar texto</button>
       <a class="btn out" href="#caixa">Nova venda</a>
