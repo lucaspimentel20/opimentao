@@ -18,6 +18,18 @@ const VERSAO_APP = "__VERSAO__";
 const meiaTxt = (n) => (Number(n) > 1 ? n + " × ½ cx" : "½ cx");
 // caixas inteiras + meia: 2 e meia = "2½ cx"
 const cxMeiaTxt = (caixas, meias) => (caixas || "") + (meias ? "½" : "") + " cx";
+// quantidade em caixas: os kg que fecham caixa (ou meia caixa) entram como caixa; só a sobra fica em kg
+function qtdCx(pid, cx, g) {
+  cx = cx || 0; g = g || 0;
+  const peso = (typeof S !== "undefined" && S.produtos?.find((p) => p.id === pid)?.pesoCaixaG) || 0;
+  if (!peso || !g) return [cx ? cx + " cx" : "", g ? kg(g) : ""].filter(Boolean).join(" + ") || "0";
+  const tot = cx * peso + g, neg = tot < 0, abs = Math.abs(tot), meia = peso / 2;
+  let meias = Math.floor((abs + 1) / meia), resto = abs - meias * meia; if (resto < 50) resto = 0; // tolera arredondamento de gramas
+  const partes = []; const inteiras = Math.floor(meias / 2), temMeia = meias % 2 === 1;
+  if (inteiras || temMeia) partes.push((inteiras || "") + (temMeia ? "½" : "") + " cx");
+  if (resto) partes.push(kg(Math.round(resto)));
+  return (neg ? "-" : "") + (partes.join(" + ") || "0");
+}
 // nome de uma conta do fiado: venda ou valor lançado fora de nota
 const nomeTitulo = (t) => (t.avulso ? "Fora de nota: " + t.descricao : "Venda " + numVenda(t.vendaId));
 const novoId = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.toUpperCase();
