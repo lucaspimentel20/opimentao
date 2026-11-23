@@ -134,3 +134,8 @@ tr:last-child td{border-bottom:none}
 .despacho .m{font-size:23px;font-weight:800;line-height:1.15}.despacho .m em{display:block;font-size:14px;font-style:normal;font-weight:700}
 .despacho .tot{display:block;text-align:right;font-size:16px;font-weight:800;margin-top:8px}
 .despacho .conf{margin-top:22px;text-align:center;font-size:13px}.despacho .conf div{border-top:1px solid #000;margin:0 6mm 2px}
+/* conta em aberto no cupom: caixa preta, letra grande e bem forte */
+.cupom .saldo-aberto{display:flex;flex-direction:column;align-items:center;border:3px solid #000;border-radius:6px;padding:5px 6px 6px;margin:8px 0 4px;color:#000;text-align:center}
+.cupom .saldo-aberto span{font-weight:900!important;white-space:nowrap}
+.cupom .saldo-aberto span:first-child{font-size:1.1em;letter-spacing:1px}
+.cupom .saldo-aberto span:last-child{font-size:1.75em;line-height:1.15}

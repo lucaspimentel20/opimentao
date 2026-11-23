@@ -396,7 +396,7 @@ function Comprovante({ s, c, id }) {
       ${v.desconto ? html`<div class="par"><span>Desconto</span><span>-${reais(v.desconto)}</span></div>` : null}
       <div class="par"><b>TOTAL</b><b>${reais(v.total)}</b></div><hr/>
       ${v.pagamentos.map((p) => html`<div class="par"><span>${FORMAS[p.forma]}</span><span>${reais(p.valor)}</span></div>`)}
-      ${v.prazo ? html`<div class="par"><span>Fiado${v.vencimento ? " (venc. " + dataBR(v.vencimento) + ")" : ""}</span><span>${reais(v.prazo)}</span></div><hr/><div class="par"><b>SALDO EM ABERTO</b><b>${reais(deve)}</b></div><div class="c"><br/>______________________<br/>Assinatura do cliente</div>` : null}
+      ${v.prazo ? html`<div class="par"><b>FIADO NESTA NOTA${v.vencimento ? " (venc. " + dataBR(v.vencimento) + ")" : ""}</b><b>${reais(v.prazo)}</b></div><div class="saldo-aberto"><span>SALDO EM ABERTO</span><span>${reais(deve)}</span></div><div class="c"><br/>______________________<br/>Assinatura do cliente</div>` : null}
       ${se ? html`<hr/><div class="c"><b>${se.status === "entregue" ? "ENTREGUE" : "PARA ENTREGAR"}</b>${v.entrega.endereco ? html`<br/>${v.entrega.endereco}` : null}${v.entrega.previsao ? html`<br/>Até ${dataBR(v.entrega.previsao)}` : null}</div>` : null}
       <hr/><div class="c"><b>Obrigado pela preferência!</b></div>
     </div>
