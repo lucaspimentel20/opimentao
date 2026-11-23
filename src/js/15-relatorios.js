@@ -39,6 +39,26 @@ function Relatorios({ s, c }) {
   const estHoje = (e) => (e.cx < 0 || e.g < 0 ? "faltam " + saldoTxt(-Math.min(e.cx, 0), -Math.min(e.g, 0)) + " de entrada" : saldoTxt(e.cx, e.g));
   const textoSemEnt = () => ["*O Pimentão — Vendido sem entrada*", per.modo === "caixa" ? "Caixa aberto" : "Período selecionado", "", ...semEnt.map((r) => `*${r.nome}* — vendido sem entrada: ${qtdTxt(r.cx, r.g)} (${r.n} nota${r.n > 1 ? "s" : ""}) · estoque hoje: ${estHoje(r.est)}\n` + r.linhas.map((l) => `  ${dataBR(l.quando)} · ${l.doc} · ${l.cliente} · ${qtdTxt(l.cx, l.g)}`).join("\n"))].join("\n");
   const linhasPdfSemEnt = () => semEnt.flatMap((r) => [[{ content: r.nome + "  —  estoque hoje: " + estHoje(r.est), colSpan: 3, styles: { fontStyle: "bold", fillColor: [253, 236, 200] } }, { content: qtdTxt(r.cx, r.g), styles: { fontStyle: "bold", fillColor: [253, 236, 200], halign: "right" } }], ...r.linhas.map((l) => [dataHora(l.quando), l.doc, l.cliente, qtdTxt(l.cx, l.g)])]);
+  // ---- resumo curto para a impressora térmica: vendido / tem pra vender / vendido sem entrada ----
+  const imprimirResumo = () => {
+    const q = (cx, g) => [cx ? cx + " cx" : "", g ? kg(g) : ""].filter(Boolean).join(" + ") || "0";
+    const vend = [...porProd].map(([id, t]) => ({ nome: c.prod.get(id)?.nome || "Produto", q: q(t.cx, t.g) })).sort((a, b) => a.nome.localeCompare(b.nome));
+    const tem = s.produtos.filter((p) => !pr || p.id === pr).map((p) => ({ nome: p.nome, e: c.estoque.get(p.id) || { cx: 0, g: 0 } })).filter((x) => x.e.cx > 0 || x.e.g > 0).sort((a, b) => a.nome.localeCompare(b.nome));
+    const agoraTxt = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const el = document.createElement("div");
+    render(html`<div class="cupom resumo-imp">
+      <div class="c"><b>O PIMENTÃO</b><br/>RESUMO DE MERCADORIAS</div>
+      <div class="c">${per.modo === "caixa" ? "Caixa aberto" : "Período selecionado"}${cli ? " · " + (s.clientes.find((k) => k.id === cli)?.nome || "") : ""}<br/>Impresso ${agoraTxt}</div><hr/>
+      <div class="c"><b>VENDIDO</b></div>
+      ${vend.length ? vend.map((x) => html`<div class="par"><span>${x.nome}</span><b>${x.q}</b></div>`) : html`<div class="c">nada vendido</div>`}
+      <div class="par"><b>TOTAL</b><b>${reais(tot)}</b></div><hr/>
+      <div class="c"><b>TEM PRA VENDER</b></div>
+      ${tem.length ? tem.map((x) => html`<div class="par"><span>${x.nome}</span><b>${saldoTxt(x.e.cx, x.e.g)}</b></div>`) : html`<div class="c">estoque zerado</div>`}<hr/>
+      <div class="c"><b>VENDIDO SEM ENTRADA</b></div>
+      ${semEnt.length ? semEnt.map((r) => html`<div class="par"><span>${r.nome}</span><b>${q(r.cx, r.g)}</b></div>${r.est.cx < 0 || r.est.g < 0 ? html`<div class="par"><small>  falta entrada</small><small>${saldoTxt(-Math.min(r.est.cx, 0), -Math.min(r.est.g, 0))}</small></div>` : null}`) : html`<div class="c">nenhum</div>`}
+    </div>`, el);
+    imprimirCupom(el.firstElementChild);
+  };
   const relatorioGeral = () => {
     const nomeCli = (id) => s.clientes.find((k) => k.id === id)?.nome || "Consumidor";
     const agrupar = (lin) => { const m = new Map(); for (const x of lin) { const nome = nomeCli(x.v.clienteId); if (!m.has(nome)) m.set(nome, { id: x.v.clienteId, total: 0, notas: new Set(), itens: new Map() }); const C = m.get(nome); C.total += x.i.total; C.notas.add(x.v.id); const un = x.i.unidade === "kg" ? "kg" : x.i.unidade === "meia" ? "meia" : "cx"; const ch = x.i.produtoId + "|" + un + "|" + x.i.preco; const L = C.itens.get(ch) || { produtoId: x.i.produtoId, un, preco: x.i.preco, q: 0, total: 0 }; L.q += un === "kg" ? x.i.gramas || 0 : un === "meia" ? x.i.meias || 1 : (x.i.caixas || 0) + (x.i.meias ? 0.5 : 0); L.total += x.i.total; C.itens.set(ch, L); } return [...m].map(([nome, C]) => ({ nome, ...C, linhas: [...C.itens.values()].sort((a, b) => (c.prod.get(a.produtoId)?.nome || "").localeCompare(c.prod.get(b.produtoId)?.nome || "")) })).sort((a, b) => a.nome.localeCompare(b.nome)); };
@@ -59,7 +79,7 @@ function Relatorios({ s, c }) {
   };
 
   const perdas = new Map(); for (const m of s.movEstoque) if (m.tipo === "desperdicio") { if (per.mov(m)) perdas.set(m.produtoId, (perdas.get(m.produtoId) || 0) + m.custo); }
-  return html`<div class="pag"><h1>Relatórios</h1>
+  return html`<div class="pag"><div class="cab"><h1>Relatórios</h1><button class="btn" onClick=${imprimirResumo}>🖨️ Imprimir resumo</button></div>
     <div class="card">${per.seletor}<div class="grade"><${Campo} r="Cliente"><${Sel} valor=${cli} set=${setCli} vazio="Todos" opcoes=${s.clientes.map((x) => [x.id, x.nome])}/></${Campo}><${Campo} r="Produto"><${Sel} valor=${pr} set=${setPr} vazio="Todos" opcoes=${s.produtos.map((x) => [x.id, x.nome])}/></${Campo}></div><div class="nao-imprimir" style="margin-top:10px"><button class="btn" disabled=${ocPdf} onClick=${() => rodarPdf(relatorioGeral, "PDF baixado")}>${ocPdf ? "Gerando…" : "📄 Relatório geral (PDF)"}</button> <small style="color:var(--muted)">clientes que pagaram · clientes no fiado · quem está devendo</small></div></div>
     ${pr ? (() => { const t = porProd.get(pr) || { cx: 0, g: 0, rec: 0, custo: 0, n: 0 }; const cu = Math.round(t.custo * 100); return html`<div class="grade"><${Num} r=${"Vendido de " + (c.prod.get(pr)?.nome || "")} v=${reais(t.rec)} d=${qtdTxt(t.cx, t.g) + " em " + t.n + " venda(s)"} tom="bom"/><${Num} r="Custo" v=${reais(cu)}/><${Num} r="Lucro da mercadoria" v=${reais(t.rec - cu)} tom=${t.rec - cu >= 0 ? "bom" : "ruim"} d=${t.rec ? "margem " + (((t.rec - cu) / t.rec) * 100).toFixed(1) + "%" : ""}/></div>`; })() : null}
     <div class="grade" style=${pr ? "display:none" : ""}><${Num} r="Vendas" v=${reais(tot)} d=${ok.length + " vendas"}/><${Num} r="Custo" v=${reais(cus)}/><${Num} r="Lucro bruto" v=${reais(tot - cus)} tom=${tot - cus >= 0 ? "bom" : "ruim"} d=${tot ? "margem " + (((tot - cus) / tot) * 100).toFixed(1) + "%" : ""}/></div>
