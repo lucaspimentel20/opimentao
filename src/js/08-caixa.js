@@ -391,7 +391,7 @@ function Comprovante({ s, c, id }) {
       <div class="c"><b>COMPROVANTE DE VENDA<br/>NÃO É DOCUMENTO FISCAL</b></div>
       ${v.status === "cancelada" ? html`<div class="c" style="border:2px solid #111;margin-top:6px"><b>${v.reaberta ? "REABERTA PARA ALTERAÇÃO" : "CANCELADA — " + v.cancelamento?.motivo}</b>${v.reaberta ? (() => { const pd = s.pedidos.find((x) => x.id === v.pedidoReaberto); return pd?.vendaId ? html`<br/><a class="link" href=${"#venda-" + pd.vendaId}>Ver a venda nova ${numVenda(pd.vendaId)}</a>` : html`<br/><small>Está nas notas em aberto do caixa</small>`; })() : null}</div>` : null}<hr/>
       <div class="par"><span>Nº ${numVenda(v.id)}</span><span>${dataHora(v.criadoEm)}</span></div>
-      <div>${sess?.nome || ""} · ${nomePessoa(s, v.operadorId)}</div><div>Cliente: ${cli?.nome || "Consumidor não identificado"}</div><hr/>
+      <div>${sess?.nome || ""} · ${nomePessoa(s, v.operadorId)}</div><div class="cli-cupom"><small>CLIENTE</small><b>${cli?.nome || "Consumidor"}</b></div><hr/>
       ${v.itens.map((i) => html`<div>${c.prod.get(i.produtoId)?.nome}</div><div class="par"><span>${q(i)} x ${(i.preco / 100).toFixed(2).replace(".", ",")}</span><span>${(i.total / 100).toFixed(2).replace(".", ",")}</span></div>${cxDe(i).map((x) => html`<div>+ ${x.q} caixa(s) ${c.tipos.get(x.tipoId)?.nome || ""} — DEVOLVER</div>`)}`)}
       <hr/><div class="par"><span>Subtotal</span><span>${reais(v.subtotal)}</span></div>
       ${v.desconto ? html`<div class="par"><span>Desconto</span><span>-${reais(v.desconto)}</span></div>` : null}
