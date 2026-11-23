@@ -144,6 +144,7 @@ function imprimirDespacho(v, c) {
 async function pdfDoCupom(alvo, nomeArquivo) {
   await carregarScript("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
   await carregarScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
+  if (typeof window.html2canvas !== "function" || !window.jspdf) throw new Error("O gerador de PDF ainda está carregando. Tente de novo em alguns segundos.");
   const cfg = impConfig(); const larg = 80, mg = 3, util = larg - 2 * mg;
   const el = typeof alvo === "string" ? document.querySelector(alvo) : alvo;
   if (!el) throw new Error("Não achei a nota para gerar o PDF.");

@@ -1,5 +1,11 @@
 // ============ PDF ============
-const carregarScript = (src) => new Promise((ok, erro) => { if (document.querySelector(`script[src="${src}"]`)) return ok(); const el = document.createElement("script"); el.src = src; el.onload = ok; el.onerror = () => erro(new Error("Não consegui carregar o gerador de PDF (sem internet?).")); document.head.appendChild(el); });
+// carrega uma biblioteca uma vez só; quem pedir de novo espera ela TERMINAR de carregar (antes respondia na hora e dava "não é uma função")
+const SCRIPTS = new Map();
+const carregarScript = (src) => {
+  if (SCRIPTS.has(src)) return SCRIPTS.get(src);
+  const p = new Promise((ok, erro) => { const el = document.createElement("script"); el.src = src; el.onload = () => ok(); el.onerror = () => { SCRIPTS.delete(src); el.remove(); erro(new Error("Não consegui carregar o gerador de PDF (sem internet?).")); }; document.head.appendChild(el); });
+  SCRIPTS.set(src, p); return p;
+};
 async function gerarPdf({ titulo, subtitulo, colunas, linhas, arquivo, alinharDireita = [], opcoes = {}, secoes }) {
   await carregarScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js");
   await carregarScript("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js");
