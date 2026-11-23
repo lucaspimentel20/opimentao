@@ -55,16 +55,27 @@ function FiadosWhats({ s, c, onFechar }) {
   const guardaFone = (v) => { setFone(v); try { localStorage.setItem("pim_fiado_contato", v); } catch { } };
   const hoje = new Date().toLocaleDateString("pt-BR");
   const texto = () => ["*O Pimentão — Fiados em aberto* (" + hoje + ")", "", ...sel.map((x) => { const e = extratoFiado(s, c, x.id); return `*${x.nome}* — deve *${reais(e.deve)}*\n` + e.pend.map((t) => `  ${e.dm(t.criadoEm)} ${e.nome(t)}: ${reais(t.saldo)}${t.vencido ? " (VENCIDA)" : ""}`).join("\n"); }), "", "*TOTAL: " + reais(total) + "*"].join("\n");
+  // cobrança: cada nota pendente COMPLETA (produtos, qtd x preço) + o resumo do que deve
   const montarExtrato = (x) => {
     const e = extratoFiado(s, c, x.id); const el = document.createElement("div");
+    const n2 = (v) => (v / 100).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const qI = (i) => (i.unidade === "cx" ? cxMeiaTxt(i.caixas, i.meias) : i.unidade === "meia" ? meiaTxt(i.meias || 1) : kg(i.gramas));
+    const hm = (iso) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
     render(html`<div class="cupom">
       <div class="c"><${Pimentao} t=${36}/><br/><b style="font-family:Fredoka;font-size:20px">O Pimentão</b><br/>HORTIFRUTI</div><hr/>
-      <div class="c"><b>EXTRATO DE FIADO</b><br/>${hoje}</div><hr/>
+      <div class="c"><b>COBRANÇA</b><br/>NOTAS EM ABERTO · ${hoje}</div><hr/>
       <div class="cli-cupom"><small>CLIENTE:</small> <b>${x.nome}</b></div><hr/>
-      <div class="c"><b>CONTAS PENDENTES</b></div><div class="par"><b>Data</b><b>Falta</b></div>
-      ${e.pend.map((t) => html`<div class="par"><span>${e.dm(t.criadoEm)} ${e.nome(t)}${t.vencido ? html` <b>VENC.</b>` : null}</span><span>${reais(t.saldo).replace("R$ ", "")}</span></div>`)}
+      ${e.pend.map((t) => { const v = !t.avulso && s.vendas.find((k) => k.id === t.vendaId);
+        if (!v) return html`<div class="par"><b>${t.descricao || "Valor pendente"}</b><b>${e.dm(t.criadoEm)}</b></div><div class="par"><b>FALTA</b><b>R$ ${n2(t.saldo)}</b></div><hr/>`;
+        const naHora = v.total - (v.prazo || 0);
+        return html`<div class="par"><b>NOTA Nº ${numVenda(v.id)}</b><b>${hm(v.criadoEm)}</b></div>
+          ${v.itens.map((i) => html`<div>${c.prod.get(i.produtoId)?.nome || "Produto"}</div><div class="par"><span>${qI(i)} x ${n2(i.preco)}</span><span>${n2(i.total)}</span></div>`)}
+          <div class="par"><span>Total da nota</span><span>R$ ${n2(v.total)}</span></div>
+          ${naHora > 0 ? html`<div class="par"><span>Pago na hora</span><span>R$ ${n2(naHora)}</span></div>` : null}
+          ${t.pago > 0 ? html`<div class="par"><span>Já pago depois</span><span>R$ ${n2(t.pago)}</span></div>` : null}
+          <div class="par"><b>FALTA NESTA NOTA${t.vencido ? " (VENCIDA)" : ""}</b><b>R$ ${n2(t.saldo)}</b></div><hr/>`; })}
       <div class="saldo-aberto"><span>SALDO EM ABERTO</span><span>${reais(e.deve)}</span></div>
-      <div class="c">Obrigado pela preferência!</div>
+      <div class="c">${e.pend.length} conta${e.pend.length > 1 ? "s" : ""} em aberto · Obrigado pela preferência!</div>
     </div>`, el);
     return el.firstElementChild;
   };
@@ -83,7 +94,7 @@ function FiadosWhats({ s, c, onFechar }) {
   // PDFs para o grupo/conversa do Financeiro: 1º gera todos, 2º compartilha todos de uma vez (Windows -> WhatsApp -> grupo)
   const [pdfs, setPdfs] = useState(null);
   const nomeArqDe = (x) => "Fiado-" + x.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") + ".pdf";
-  const gerarPdfs = () => rodar(async () => { const l = []; for (let i = 0; i < sel.length; i++) { setProg(`Gerando ${i + 1} de ${sel.length}`); l.push(await pdfDoCupom(montarExtrato(sel[i]), nomeArqDe(sel[i]))); } setProg(""); setPdfs(l); }, "PDFs prontos. Agora clique em Salvar e abrir WhatsApp.");
+  const gerarPdfs = () => rodar(async () => { const l = []; for (let i = 0; i < sel.length; i++) { setProg(`Gerando ${i + 1} de ${sel.length}`); l.push(await pdfDoCupom(montarExtrato(sel[i]), nomeArqDe(sel[i]))); } setProg(""); entregarPdfs(l); setAvisoPdf(l.map((a) => a.name)); });
   const compartilharPdfs = () => { entregarPdfs(pdfs); setAvisoPdf(pdfs.map((a) => a.name)); };
   const [avisoPdf, setAvisoPdf] = useState(null);
   // alternativa: baixar todos em PDF (um arquivo por cliente)
@@ -91,8 +102,8 @@ function FiadosWhats({ s, c, onFechar }) {
     for (let i = 0; i < sel.length; i++) { const x = sel[i]; setProg(`PDF ${i + 1} de ${sel.length}`); const nomeArq = "Fiado-" + x.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") + ".pdf"; baixarArquivo(await pdfDoCupom(montarExtrato(x), nomeArq)); await new Promise((r) => setTimeout(r, 500)); }
     setProg("");
   }, "PDFs baixados na pasta Downloads");
-  return html`<${Modal} grande titulo="Enviar todos os fiados" sub="PDF para o grupo Financeiro: clique em \"PDFs para o grupo Financeiro\" e depois em \"Salvar e abrir WhatsApp\". Ou use o passo a passo (imagem + Ctrl+V) para um contato." onFechar=${onFechar}
-    rod=${html`${pdfs ? html`<button class="btn" disabled=${oc} onClick=${compartilharPdfs}>📤 Salvar ${pdfs.length} PDF(s) e abrir WhatsApp</button>` : html`<button class="btn" disabled=${oc || !sel.length} onClick=${gerarPdfs}>${oc && prog ? prog : "📄 PDFs para o grupo Financeiro"}</button>`}<button class="btn out" onClick=${() => abrirWhatsApp(fone, texto())} disabled=${!sel.length}>💬 Tudo em texto</button>${atual ? html`<button class="btn out" disabled=${oc} onClick=${proximo}>📲 ${pos ? "Próximo" : "Começar"}: ${atual.nome} (${pos + 1}/${sel.length})</button>` : html`<button class="btn" onClick=${onFechar}>✅ Terminei (${sel.length})</button>`}`}>
+  return html`<${Modal} grande titulo="Enviar todos os fiados" sub="Um clique: gera a cobrança de cada cliente (notas completas + o que deve), salva os PDFs e abre o WhatsApp para você mandar no grupo Financeiro. Ou use o passo a passo (imagem + Ctrl+V) para um contato." onFechar=${onFechar}
+    rod=${html`<button class="btn" disabled=${oc || !sel.length} onClick=${gerarPdfs}>${oc && prog ? prog : "📄 Mandar " + sel.length + " cobrança(s) em PDF"}</button><button class="btn out" onClick=${() => abrirWhatsApp(fone, texto())} disabled=${!sel.length}>💬 Tudo em texto</button>${atual ? html`<button class="btn out" disabled=${oc} onClick=${proximo}>📲 ${pos ? "Próximo" : "Começar"}: ${atual.nome} (${pos + 1}/${sel.length})</button>` : html`<button class="btn" onClick=${onFechar}>✅ Terminei (${sel.length})</button>`}`}>
     <${Campo} r="WhatsApp do contato que vai receber" d="Fica guardado neste aparelho. Ex.: 91 98888-7777"><input inputmode="tel" value=${fone} onInput=${(e) => guardaFone(e.target.value)} placeholder="DDD + número"/></${Campo}>
     <div class="acoes"><button class="btn ghost sm" onClick=${() => { setMarc(devedores.map((x) => x.id)); setPos(0); setPdfs(null); }}>Marcar todos</button><button class="btn ghost sm" onClick=${() => { setMarc([]); setPos(0); setPdfs(null); }}>Desmarcar</button><span class="txt">${sel.length} cliente(s) · total <b>${reais(total)}</b></span></div>
     <div class="lista" style="max-height:45vh;overflow:auto">${devedores.map((x) => html`<label class="chk" style="border:1px solid var(--border);border-radius:10px;padding:4px 10px"><input type="checkbox" checked=${marc.includes(x.id)} onChange=${(e) => { setMarc(e.target.checked ? [...marc, x.id] : marc.filter((y) => y !== x.id)); setPos(0); setPdfs(null); }}/><span style="flex:1">${x.nome}${(c.clientes.get(x.id)?.vencido || 0) > 0 ? html` <span class="tag red">vencido</span>` : null}</span><b>${reais(c.clientes.get(x.id)?.deve || 0)}</b></label>`)}</div>
