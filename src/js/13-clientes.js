@@ -38,9 +38,61 @@ function DebitoForm({ cl, onFechar }) {
     <${Campo} r="Descrição" d="Ex.: saldo anterior, conta do caderno, mercadoria de outubro"><input value=${f.descricao} onInput=${(e) => setF({ ...f, descricao: e.target.value })}/></${Campo}>
   </${Modal}>`;
 }
+// ---- todos os fiados de uma vez para UM contato do WhatsApp (ele repassa a cada cliente) ----
+function extratoFiado(s, c, cliId) {
+  const cl = s.clientes.find((x) => x.id === cliId); const k = c.clientes.get(cliId) || { deve: 0 };
+  const pend = c.titulos.filter((t) => t.clienteId === cliId && t.saldo > 0).sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : 1));
+  const dm = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "");
+  const nome = (t) => (t.avulso ? t.descricao : "Nota " + numVenda(t.vendaId));
+  return { cl, deve: k.deve, pend, dm, nome };
+}
+function FiadosWhats({ s, c, onFechar }) {
+  const devedores = s.clientes.filter((x) => (c.clientes.get(x.id)?.deve || 0) > 0).sort((a, b) => a.nome.localeCompare(b.nome));
+  const [marc, setMarc] = useState(devedores.map((x) => x.id));
+  const [fone, setFone] = useState(() => { try { return localStorage.getItem("pim_fiado_contato") || ""; } catch { return ""; } });
+  const [arqs, setArqs] = useState(null); const [prog, setProg] = useState(""); const [oc, rodar] = useAcao();
+  const sel = devedores.filter((x) => marc.includes(x.id)); const total = sel.reduce((a, x) => a + (c.clientes.get(x.id)?.deve || 0), 0);
+  const guardaFone = (v) => { setFone(v); try { localStorage.setItem("pim_fiado_contato", v); } catch { } };
+  const hoje = new Date().toLocaleDateString("pt-BR");
+  const texto = () => ["*O Pimentão — Fiados em aberto* (" + hoje + ")", "", ...sel.map((x) => { const e = extratoFiado(s, c, x.id); return `*${x.nome}* — deve *${reais(e.deve)}*\n` + e.pend.map((t) => `  ${e.dm(t.criadoEm)} ${e.nome(t)}: ${reais(t.saldo)}${t.vencido ? " (VENCIDA)" : ""}`).join("\n"); }), "", "*TOTAL: " + reais(total) + "*"].join("\n");
+  // 1º clique: gera um PDF por cliente (no formato do cupom, logo colorido)
+  const gerar = () => rodar(async () => {
+    const lista = [];
+    for (let i = 0; i < sel.length; i++) {
+      const x = sel[i]; setProg(`Gerando ${i + 1} de ${sel.length}: ${x.nome}`);
+      const e = extratoFiado(s, c, x.id); const el = document.createElement("div");
+      render(html`<div class="cupom">
+        <div class="c"><${Pimentao} t=${36}/><br/><b style="font-family:Fredoka;font-size:20px">O Pimentão</b><br/>HORTIFRUTI</div><hr/>
+        <div class="c"><b>EXTRATO DE FIADO</b><br/>${hoje}</div><hr/>
+        <div class="cli-cupom"><small>CLIENTE:</small> <b>${x.nome}</b></div><hr/>
+        <div class="c"><b>CONTAS PENDENTES</b></div><div class="par"><b>Data</b><b>Falta</b></div>
+        ${e.pend.map((t) => html`<div class="par"><span>${e.dm(t.criadoEm)} ${e.nome(t)}${t.vencido ? html` <b>VENC.</b>` : null}</span><span>${reais(t.saldo).replace("R$ ", "")}</span></div>`)}
+        <div class="saldo-aberto"><span>SALDO EM ABERTO</span><span>${reais(e.deve)}</span></div>
+        <div class="c">Obrigado pela preferência!</div>
+      </div>`, el);
+      const nomeArq = "Fiado-" + x.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "") + ".pdf";
+      lista.push(await pdfDoCupom(el.firstElementChild, nomeArq));
+    }
+    setProg(""); setArqs(lista);
+  });
+  // 2º clique: compartilha todos de uma vez (escolha o contato no WhatsApp); se não der, baixa e abre a conversa do contato
+  const enviar = () => rodar(async () => {
+    const msg = `O Pimentão — ${arqs.length} extrato(s) de fiado, total ${reais(total)}`;
+    if (navigator.canShare?.({ files: arqs })) { try { await navigator.share({ files: arqs, title: "Fiados", text: msg }); return; } catch (e) { if (e?.name === "AbortError") return; } }
+    for (const a of arqs) { const u = URL.createObjectURL(a); const l = document.createElement("a"); l.href = u; l.download = a.name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); await new Promise((r) => setTimeout(r, 400)); }
+    abrirWhatsApp(fone, msg); toast("PDFs baixados na pasta Downloads. Na conversa, clique no clipe 📎 e anexe todos.");
+  });
+  return html`<${Modal} grande titulo="Enviar todos os fiados" sub="Vai tudo para UM contato seu (ex.: o cobrador ou você mesmo). Depois é só encaminhar cada PDF para o cliente certo." onFechar=${onFechar}
+    rod=${html`<button class="btn out" onClick=${() => abrirWhatsApp(fone, texto())} disabled=${!sel.length}>💬 Mandar como texto</button>${arqs ? html`<button class="btn" disabled=${oc} onClick=${enviar}>📤 Enviar ${arqs.length} PDF(s)</button>` : html`<button class="btn" disabled=${oc || !sel.length} onClick=${gerar}>${oc ? prog || "Gerando…" : "📄 Gerar " + sel.length + " PDF(s)"}</button>`}`}>
+    <${Campo} r="WhatsApp do contato que vai receber" d="Fica guardado neste aparelho. Ex.: 91 98888-7777"><input inputmode="tel" value=${fone} onInput=${(e) => guardaFone(e.target.value)} placeholder="DDD + número"/></${Campo}>
+    <div class="acoes"><button class="btn ghost sm" onClick=${() => { setMarc(devedores.map((x) => x.id)); setArqs(null); }}>Marcar todos</button><button class="btn ghost sm" onClick=${() => { setMarc([]); setArqs(null); }}>Desmarcar</button><span class="txt">${sel.length} cliente(s) · total <b>${reais(total)}</b></span></div>
+    <div class="lista" style="max-height:45vh;overflow:auto">${devedores.map((x) => html`<label class="chk" style="border:1px solid var(--border);border-radius:10px;padding:4px 10px"><input type="checkbox" checked=${marc.includes(x.id)} onChange=${(e) => { setMarc(e.target.checked ? [...marc, x.id] : marc.filter((y) => y !== x.id)); setArqs(null); }}/><span style="flex:1">${x.nome}${(c.clientes.get(x.id)?.vencido || 0) > 0 ? html` <span class="tag red">vencido</span>` : null}</span><b>${reais(c.clientes.get(x.id)?.deve || 0)}</b></label>`)}</div>
+    ${!devedores.length ? html`<${Vazio}>Ninguém devendo. 🎉</${Vazio}>` : null}
+  </${Modal}>`;
+}
 function Clientes({ s, c, selId }) {
   const gestor = papelDe(s) === "gestor";
-  const [b, setB] = useState(""); const [so, setSo] = useState(false); const [ed, setEd] = useState(undefined); const [rec, setRec] = useState(false); const [est, setEst] = useState(null); const [mot, setMot] = useState(""); const [mv, setMv] = useState(null); const [oc, rodar] = useAcao(); const [deb, setDeb] = useState(false);
+  const [b, setB] = useState(""); const [so, setSo] = useState(false); const [ed, setEd] = useState(undefined); const [rec, setRec] = useState(false); const [est, setEst] = useState(null); const [mot, setMot] = useState(""); const [mv, setMv] = useState(null); const [oc, rodar] = useAcao(); const [deb, setDeb] = useState(false); const [todosFiados, setTodosFiados] = useState(false);
   const cancelarDebito = (t) => rodar(async () => { if (!confirm(`Cancelar o valor pendente "${t.descricao}" de ${reais(t.valor)}?`)) return; await alterar("debitos", t.vendaId, { status: "cancelado", canceladoPor: S.eu, canceladoEm: agora() }); }, "Valor pendente cancelado");
   const lista = s.clientes.filter((x) => (`${x.nome} ${x.telefone || ""}`).toLowerCase().includes(b.trim().toLowerCase()) && (!so || c.clientes.get(x.id)?.deve > 0)).sort((a, z) => a.nome.localeCompare(z.nome));
   const cl = s.clientes.find((x) => x.id === selId);
@@ -67,7 +119,7 @@ function Clientes({ s, c, selId }) {
     </div>`;
   }
   return html`<div class="pag">
-    ${cl ? det : html`<div class="cab"><h1>Clientes</h1><button class="btn" onClick=${() => setEd(null)}>+ Novo cliente</button></div>
+    ${cl ? det : html`<div class="cab"><h1>Clientes</h1><div class="acoes"><button class="btn out" onClick=${() => setTodosFiados(true)}>📤 Enviar todos os fiados</button><button class="btn" onClick=${() => setEd(null)}>+ Novo cliente</button></div></div>${todosFiados ? html`<${FiadosWhats} s=${s} c=${c} onFechar=${() => setTodosFiados(false)}/>` : null}
     <div class="card"><div class="acoes"><input placeholder="🔎 Nome ou telefone" value=${b} onInput=${(e) => setB(e.target.value)} style="max-width:320px"/><label class="chk"><input type="checkbox" checked=${so} onChange=${(e) => setSo(e.target.checked)}/>Só quem está devendo</label></div>
     ${lista.length ? html`<div class="tab"><table><thead><tr><th>Cliente</th><th>Telefone</th><th class="r">Deve</th><th class="r">Vencido</th></tr></thead><tbody>${lista.map((x) => { const k = c.clientes.get(x.id); return html`<tr class=${x.ativo === false ? "risc" : ""}><td><a class="link" href=${"#cliente-" + x.id}>${x.nome}</a></td><td>${x.telefone}</td><td class="r">${k?.deve ? reais(k.deve) : "—"}</td><td class="r">${k?.vencido ? reais(k.vencido) : "—"}</td></tr>`; })}</tbody></table></div>` : html`<${Vazio}>Nenhum cliente.</${Vazio}>`}</div>`}
     ${ed !== undefined ? html`<${ClienteForm} cl=${ed} onFechar=${() => setEd(undefined)} onSalvo=${(id) => { location.hash = "cliente-" + id; }}/>` : null}
