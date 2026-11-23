@@ -44,6 +44,8 @@ function Relatorios({ s, c }) {
     const q = (cx, g) => [cx ? cx + " cx" : "", g ? kg(g) : ""].filter(Boolean).join(" + ") || "0";
     const vend = [...porProd].map(([id, t]) => ({ nome: c.prod.get(id)?.nome || "Produto", q: qtdCx(id, t.cx, t.g) })).sort((a, b) => a.nome.localeCompare(b.nome));
     const tem = s.produtos.filter((p) => !pr || p.id === pr).map((p) => ({ id: p.id, nome: p.nome, e: c.estoque.get(p.id) || { cx: 0, g: 0 } })).filter((x) => x.e.cx > 0 || x.e.g > 0).sort((a, b) => a.nome.localeCompare(b.nome));
+    // tudo que está com estoque negativo = vendido sem entrada (ainda falta dar entrada)
+    const faltaEnt = s.produtos.filter((p) => !pr || p.id === pr).map((p) => { const e = c.estoque.get(p.id) || { cx: 0, g: 0 }; const t = qtdCx(p.id, e.cx, e.g); return { nome: p.nome, q: t.slice(1), neg: t.startsWith("-") }; }).filter((x) => x.neg).sort((a, b) => a.nome.localeCompare(b.nome));
     const agoraTxt = new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
     const el = document.createElement("div");
     render(html`<div class="cupom resumo-imp">
@@ -57,8 +59,8 @@ function Relatorios({ s, c }) {
       <div class="par"><b>TOTAL</b><b>${reais(tot)}</b></div><hr/>
       <div class="c"><b>TEM PRA VENDER</b></div>
       ${tem.length ? tem.map((x) => html`<div class="par"><span>${x.nome}</span><b>${qtdCx(x.id, x.e.cx, x.e.g)}</b></div>`) : html`<div class="c">estoque zerado</div>`}<hr/>
-      <div class="c"><b>VENDIDO SEM ENTRADA</b></div>
-      ${semEnt.length ? semEnt.map((r) => html`<div class="par"><span>${r.nome}</span><b>${qtdCx(r.id, r.cx, r.g)}</b></div>`) : html`<div class="c">nenhum</div>`}
+      <div class="c"><b>VENDIDO SEM ENTRADA</b><br/><small>(falta dar entrada)</small></div>
+      ${faltaEnt.length ? faltaEnt.map((x) => html`<div class="par"><span>${x.nome}</span><b>${x.q}</b></div>`) : html`<div class="c">nenhum</div>`}
     </div>`, el);
     imprimirCupom(el.firstElementChild);
   };
