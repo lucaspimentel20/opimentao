@@ -79,7 +79,7 @@ function Relatorios({ s, c }) {
   };
   // ---- entradas do período: valor da nota, frete e lucro apurado das vendas ----
   const ents = s.compras.filter((x) => x.status !== "cancelada" && per.compra(x) && (!pr || (x.itens || []).some((i) => i.produtoId === pr))).sort((a, b) => (a.criadoEm < b.criadoEm ? -1 : 1))
-    .map((x) => ({ id: x.id, quando: x.criadoEm, forn: x.rendeu ? "Rendeu (sem custo)" : s.fornecedores.find((f) => f.id === x.fornecedorId)?.nome || "Fornecedor", rendeu: !!x.rendeu, cx: (x.itens || []).reduce((a, i) => a + (i.caixas || 0), 0), nota: x.valorTotal || 0, frete: (x.frete || 0) + (x.comissao || 0) }));
+    .map((x) => ({ id: x.id, quando: x.criadoEm, forn: x.rendeu ? (x.origem === "producao" ? "Produção própria" : "Rendeu") + " (sem custo)" : s.fornecedores.find((f) => f.id === x.fornecedorId)?.nome || "Fornecedor", rendeu: !!x.rendeu, cx: (x.itens || []).reduce((a, i) => a + (i.caixas || 0), 0), nota: x.valorTotal || 0, frete: (x.frete || 0) + (x.comissao || 0) }));
   const fin = { nota: ents.reduce((a, e) => a + e.nota, 0), frete: ents.reduce((a, e) => a + e.frete, 0), cx: ents.filter((e) => !e.rendeu).reduce((a, e) => a + e.cx, 0), rendeuCx: ents.filter((e) => e.rendeu).reduce((a, e) => a + e.cx, 0), vendas: tot, custo: cus };
   fin.lucro = fin.vendas - fin.custo; fin.margem = fin.vendas ? ((fin.lucro / fin.vendas) * 100).toFixed(1).replace(".", ",") + "%" : "—";
   const imprimirFinanceiro = () => {
@@ -93,7 +93,7 @@ function Relatorios({ s, c }) {
       <div class="par"><span>Valor das notas</span><b>${reais(fin.nota)}</b></div>
       <div class="par"><span>Frete</span><b>${reais(fin.frete)}</b></div>
       <div class="par"><b>CUSTO DAS ENTRADAS</b><b>${reais(fin.nota + fin.frete)}</b></div>
-      ${fin.rendeuCx ? html`<div class="par"><span>Rendeu (sem custo)</span><b>${fin.rendeuCx} cx</b></div>` : null}<hr/>
+      ${fin.rendeuCx ? html`<div class="par"><span>Sem custo (produção/rendeu)</span><b>${fin.rendeuCx} cx</b></div>` : null}<hr/>
       <div class="c"><b>APURADO</b></div>
       <div class="par"><span>Vendido</span><b>${reais(fin.vendas)}</b></div>
       <div class="par"><span>Custo do vendido</span><b>${reais(fin.custo)}</b></div>
@@ -131,7 +131,7 @@ function Relatorios({ s, c }) {
     </div>
     <div class="card"><h2>Entradas e lucro</h2>
       <div class="grade"><${Num} r="Valor das notas" v=${reais(fin.nota)} d=${fin.cx + " cx"}/><${Num} r="Frete" v=${reais(fin.frete)}/><${Num} r="Vendido" v=${reais(fin.vendas)}/><${Num} r="Lucro apurado" v=${reais(fin.lucro)} tom=${fin.lucro >= 0 ? "bom" : "ruim"} d=${"margem " + fin.margem}/></div>
-      ${ents.length ? html`<div class="tab"><table><thead><tr><th>Quando</th><th>Fornecedor</th><th class="r">Caixas</th><th class="r">Valor da nota</th><th class="r">Frete</th><th class="r">Custo total</th></tr></thead><tbody>${ents.map((e) => html`<tr><td>${dataHora(e.quando)}</td><td>${e.rendeu ? html`<span class="tag">Rendeu</span>` : e.forn}</td><td class="r">${e.cx}</td><td class="r">${e.rendeu ? "—" : reais(e.nota)}</td><td class="r">${e.rendeu ? "—" : reais(e.frete)}</td><td class="r"><b>${e.rendeu ? "sem custo" : reais(e.nota + e.frete)}</b></td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Nenhuma entrada no período.</${Vazio}>`}
+      ${ents.length ? html`<div class="tab"><table><thead><tr><th>Quando</th><th>Fornecedor</th><th class="r">Caixas</th><th class="r">Valor da nota</th><th class="r">Frete</th><th class="r">Custo total</th></tr></thead><tbody>${ents.map((e) => html`<tr><td>${dataHora(e.quando)}</td><td>${e.rendeu ? html`<span class="tag">${e.forn.replace(" (sem custo)", "")}</span>` : e.forn}</td><td class="r">${e.cx}</td><td class="r">${e.rendeu ? "—" : reais(e.nota)}</td><td class="r">${e.rendeu ? "—" : reais(e.frete)}</td><td class="r"><b>${e.rendeu ? "sem custo" : reais(e.nota + e.frete)}</b></td></tr>`)}</tbody></table></div>` : html`<${Vazio}>Nenhuma entrada no período.</${Vazio}>`}
       <p class="txt">Lucro apurado = vendido no período − custo da mercadoria vendida (pelo custo de cada entrada, com frete).</p>
     </div>
     <div class="card" id="sem-entrada"><div class="cab"><h2>Vendido sem entrada</h2><div class="acoes nao-imprimir"><button class="btn out sm" disabled=${!semEnt.length} onClick=${() => navigator.clipboard?.writeText(textoSemEnt()).then(() => toast("Copiado. É só colar no WhatsApp."), () => toast("Não deu para copiar", true))}>Copiar</button><button class="btn sm" disabled=${ocPdf || !semEnt.length} onClick=${() => rodarPdf(() => gerarPdf({ titulo: "Vendido sem entrada" + (cli ? " — " + (s.clientes.find((k) => k.id === cli)?.nome || "") : "") + (pr ? " — " + (c.prod.get(pr)?.nome || "") : ""), subtitulo: (per.texto) + " · mercadoria vendida antes de ter entrada no estoque", colunas: ["Data", "Nota", "Cliente", "Qtd"], alinharDireita: [3], linhas: linhasPdfSemEnt(), opcoes: { alternateRowStyles: {} }, arquivo: "pimentao-vendido-sem-entrada-" + hojeISO() + ".pdf" }), "PDF baixado")}>${ocPdf ? "Gerando…" : "Baixar PDF"}</button></div></div>
