@@ -11,7 +11,9 @@ function usePeriodo(s, deInicial) {
     modo: m, temCaixa,
     venda: (v) => (m === "caixa" ? ids.has(v.sessaoId) : naData(v.criadoEm)),
     mov: (x) => (m === "caixa" ? ids.has(x.sessaoId) || (!x.sessaoId && x.criadoEm >= desde) : naData(x.criadoEm)),
-    compra: (x) => (m === "caixa" ? (x.criadoEm || "") >= desde : x.dataRecebimento >= de && x.dataRecebimento <= ate),
+    // entrada: no caixa aberto, as do mesmo dia de vendas da abertura (a carga costuma chegar antes de abrir o caixa)
+    compra: (x) => (m === "caixa" ? diaComercial(x.criadoEm || x.dataRecebimento) >= diaComercial(desde) : (x.dataRecebimento || diaComercial(x.criadoEm)) >= de && (x.dataRecebimento || diaComercial(x.criadoEm)) <= ate),
+    texto: m === "caixa" ? "Caixa aberto desde " + dataHora(desde) : de === ate ? "Dia " + dataBR(de) + " (12h às 12h)" : "De " + dataBR(de) + " a " + dataBR(ate) + " (dia vira ao meio-dia)",
     seletor: html`<div class="acoes">${temCaixa ? html`<div class="seg" style="min-width:260px"><button class=${m === "caixa" ? "on" : ""} onClick=${() => setModo("caixa")}>Caixa aberto</button><button class=${m === "datas" ? "on" : ""} onClick=${() => setModo("datas")}>Por datas</button></div>` : null}${m === "datas" ? html`<input type="date" value=${de} onChange=${(e) => setDe(e.target.value)} style="width:160px"/><input type="date" value=${ate} onChange=${(e) => setAte(e.target.value)} style="width:160px"/>` : html`<small class="txt">desde ${dataHora(desde)}</small>`}</div>`,
   };
 }
