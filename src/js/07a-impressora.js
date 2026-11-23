@@ -182,6 +182,12 @@ async function enviarNotaWhats(alvo, { fone, texto }) {
   if (copiou) toast("✅ Nota copiada. Na conversa do WhatsApp aperte Ctrl+V e depois Enter.");
   else toast("Não consegui copiar a imagem; mandei a nota em texto. Use 'Baixar PDF' se quiser o arquivo.", true);
 }
+// abre o "Compartilhar" do Windows com os PDFs (escolha WhatsApp e o grupo). Devolve "ok", "cancelado", "clique" (precisa clicar de novo) ou "sem"
+async function compartilharArquivos(arqs, titulo) {
+  if (!navigator.canShare?.({ files: arqs })) return "sem";
+  try { await navigator.share({ files: arqs, title: titulo }); return "ok"; }
+  catch (e) { if (e?.name === "AbortError") return "cancelado"; if (e?.name === "NotAllowedError") return "clique"; console.warn(e); return "sem"; }
+}
 function baixarArquivo(arq) { const u = URL.createObjectURL(arq); const a = document.createElement("a"); a.href = u; a.download = arq.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
 // manda o PDF: no celular/Windows abre "Compartilhar" (escolha o WhatsApp); se não der, baixa o PDF e abre a conversa
 async function enviarNotaPdf(alvo, { nomeArquivo, fone, texto }) {
