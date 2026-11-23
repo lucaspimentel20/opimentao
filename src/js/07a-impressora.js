@@ -152,8 +152,9 @@ async function pdfDoCupom(alvo, nomeArquivo) {
   caixa.style.cssText = `position:fixed;left:-10000px;top:0;background:#fff;width:${larg}mm;padding:4mm 0`;
   const cp = el.cloneNode(true); cp.removeAttribute("style"); cp.classList.add("cupom-pdf");
   cp.style.cssText = `width:${util}mm;max-width:none;margin:0 ${mg}mm;padding:0;border:0;box-shadow:none;font-size:${cfg.fonte || 14}px;line-height:1.35;color:#000;font-weight:${cfg.negrito ? 600 : 400};background:#fff`;
-  cp.querySelectorAll("*").forEach((x) => { x.style.color = "#000"; });
-  cp.querySelectorAll("svg *").forEach((x) => { const f = x.getAttribute("fill"), st = x.getAttribute("stroke"); if (f !== "none") x.setAttribute("fill", "#000"); if (st && st !== "none") x.setAttribute("stroke", "#000"); x.removeAttribute("opacity"); }); // logo preto (html2canvas não aplica filtro)
+  cp.querySelectorAll("*").forEach((x) => { if (!x.closest("svg")) x.style.color = "#000"; });
+  // no PDF o logo fica COLORIDO (verde do Pimentão); só a impressora térmica imprime preto
+  cp.querySelectorAll("svg, svg *").forEach((x) => { x.style.filter = "none"; x.style.color = ""; });
   caixa.appendChild(cp); document.body.appendChild(caixa);
   try {
     const canvas = await window.html2canvas(caixa, { scale: 3, backgroundColor: "#ffffff", logging: false });
